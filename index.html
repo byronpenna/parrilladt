@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Toma de Pedidos - Cancha</title>
+<link rel="stylesheet" href="styles.css">
+<style>
+  .layout {
+    display: flex;
+    gap: 16px;
+    padding: 16px;
+    height: calc(100vh - 90px);
+  }
+  .menu-panel {
+    flex: 1.4;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    overflow: hidden;
+  }
+  .cliente-box {
+    padding: 14px;
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+  .cliente-box input {
+    flex: 1;
+    min-width: 200px;
+    padding: 12px 14px;
+    font-size: 1.1rem;
+    border-radius: 10px;
+    border: 2px solid var(--verde);
+  }
+  .categorias {
+    display: flex;
+    gap: 8px;
+    overflow-x: auto;
+    padding: 4px 2px;
+  }
+  .categoria-btn {
+    background: var(--blanco);
+    border: 2px solid var(--verde);
+    color: var(--verde-oscuro);
+    border-radius: 20px;
+    padding: 8px 16px;
+    font-weight: 700;
+    white-space: nowrap;
+    cursor: pointer;
+  }
+  .categoria-btn.activa {
+    background: var(--naranja);
+    border-color: var(--naranja);
+    color: var(--blanco);
+  }
+  .menu-grid {
+    flex: 1;
+    overflow-y: auto;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 12px;
+    padding: 6px;
+  }
+  .item-card {
+    padding: 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    border: 3px solid transparent;
+  }
+  .item-card.categoria-oculta { display: none; }
+  .item-card h3 { margin: 0; font-size: 1.05rem; }
+  .item-card .precio { color: var(--verde-oscuro); font-weight: 700; font-size: 1.1rem; }
+  .stepper { display: flex; align-items: center; gap: 10px; justify-content: space-between; }
+  .stepper button {
+    width: 40px; height: 40px; border-radius: 50%;
+    border: none; background: var(--verde); color: var(--blanco);
+    font-size: 1.3rem; font-weight: 700; cursor: pointer;
+  }
+  .stepper button.mas { background: var(--naranja); }
+  .stepper .cant { font-size: 1.2rem; font-weight: 700; min-width: 24px; text-align: center; }
+
+  .carrito-panel {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    padding: 16px;
+    gap: 12px;
+    max-width: 380px;
+  }
+  .carrito-panel h2 { margin: 0; color: var(--verde-oscuro); }
+  #carritoLista { list-style: none; margin: 0; padding: 0; flex: 1; overflow-y: auto; }
+  #carritoLista li {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 10px 0; border-bottom: 1px solid #eee;
+  }
+  #carritoLista .quitar { background: none; border: none; color: #c0392b; font-size: 1.2rem; cursor: pointer; }
+  #carritoLista .vacio { color: #999; text-align: center; padding: 20px 0; }
+  #notaInput {
+    width: 100%; min-height: 60px; border-radius: 10px; border: 2px solid #ddd;
+    padding: 10px; font-size: 1rem; resize: vertical;
+  }
+  .total { font-size: 1.4rem; font-weight: 800; color: var(--verde-oscuro); text-align: right; }
+  #btnEnviar { font-size: 1.2rem; padding: 16px; }
+  #btnEnviar:disabled { opacity: 0.6; cursor: not-allowed; }
+  #syncStatus { font-size: 0.85rem; text-align: center; min-height: 20px; }
+  #syncStatus.error { color: #b30000; font-weight: 700; }
+  #syncStatus.ok { color: var(--verde-oscuro); font-weight: 700; }
+  #toast {
+    position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
+    background: var(--verde-oscuro); color: var(--blanco); padding: 14px 24px;
+    border-radius: 10px; box-shadow: var(--sombra); font-weight: 700;
+    opacity: 0; pointer-events: none; transition: opacity 0.25s ease;
+    z-index: 50;
+  }
+  #toast.mostrar { opacity: 1; }
+</style>
+</head>
+<body>
+
+<header class="cancha-header">
+  <h1>⚽ Toma de Pedidos</h1>
+  <div class="reloj" id="reloj">--:--</div>
+</header>
+
+<div class="layout">
+  <section class="menu-panel">
+    <div class="cliente-box card-blanca">
+      <input id="clienteInput" list="clientesList" placeholder="Buscar o escribir cliente...">
+      <datalist id="clientesList"></datalist>
+      <button class="btn btn-blanco" id="btnClienteRapido">Cliente rápido</button>
+    </div>
+    <div class="categorias" id="categorias"></div>
+    <div class="menu-grid" id="menuGrid"></div>
+  </section>
+
+  <aside class="carrito-panel card-blanca">
+    <h2>Pedido actual</h2>
+    <ul id="carritoLista"><li class="vacio">Aún no agregas productos</li></ul>
+    <textarea id="notaInput" placeholder="Notas del pedido (ej: sin cebolla, para llevar...)"></textarea>
+    <div class="total">Total: $<span id="totalTexto">0.00</span></div>
+    <button class="btn btn-naranja" id="btnEnviar">Enviar a cocina</button>
+    <div id="syncStatus"></div>
+  </aside>
+</div>
+
+<div id="toast"></div>
+
+<script src="config.js"></script>
+<script>
+const carrito = new Map(); // item -> {item, precio, cantidad, categoria}
+let menuCache = [];
+let clientesCache = [];
+let categoriaActiva = 'Todos';
+
+const CLAVE_MENU = 'cancha_menu_cache';
+const CLAVE_CLIENTES = 'cancha_clientes_cache';
+const CLAVE_PENDIENTES = 'cancha_pedidos_pendientes';
+
+function actualizarReloj() {
+  document.getElementById('reloj').textContent =
+    new Date().toLocaleTimeString('es', { hour: '2-digit', minute: '2-digit' });
+}
+actualizarReloj();
+setInterval(actualizarReloj, 15000);
+
+function mostrarToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('mostrar');
+  setTimeout(() => t.classList.remove('mostrar'), 2200);
+}
+
+async function apiGet(action) {
+  const res = await fetch(`${APPS_SCRIPT_URL}?action=${action}`);
+  return res.json();
+}
+
+// POST como text/plain evita el preflight CORS que Apps Script no maneja
+async function apiPost(body) {
+  const res = await fetch(APPS_SCRIPT_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+    body: JSON.stringify(body),
+  });
+  return res.json();
+}
+
+async function cargarMenu() {
+  try {
+    const data = await apiGet('menu');
+    if (Array.isArray(data)) {
+      menuCache = data;
+      localStorage.setItem(CLAVE_MENU, JSON.stringify(data));
+    }
+  } catch (e) {
+    const cache = localStorage.getItem(CLAVE_MENU);
+    if (cache) menuCache = JSON.parse(cache);
+  }
+  renderCategorias();
+  renderMenu();
+}
+
+async function cargarClientes() {
+  try {
+    const data = await apiGet('clientes');
+    if (Array.isArray(data)) {
+      clientesCache = data;
+      localStorage.setItem(CLAVE_CLIENTES, JSON.stringify(data));
+    }
+  } catch (e) {
+    const cache = localStorage.getItem(CLAVE_CLIENTES);
+    if (cache) clientesCache = JSON.parse(cache);
+  }
+  const dl = document.getElementById('clientesList');
+  dl.innerHTML = clientesCache.map(c => `<option value="${escapeHtml(c.nombre)}">`).join('');
+}
+
+function renderCategorias() {
+  const categorias = ['Todos', ...new Set(menuCache.map(m => m.categoria || 'Otros'))];
+  const cont = document.getElementById('categorias');
+  cont.innerHTML = categorias.map(c =>
+    `<button class="categoria-btn ${c === categoriaActiva ? 'activa' : ''}" data-cat="${escapeHtml(c)}">${escapeHtml(c)}</button>`
+  ).join('');
+  cont.querySelectorAll('.categoria-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      categoriaActiva = btn.dataset.cat;
+      renderCategorias();
+      renderMenu();
+    });
+  });
+}
+
+function renderMenu() {
+  const cont = document.getElementById('menuGrid');
+  cont.innerHTML = menuCache.map(m => {
+    const cant = carrito.get(m.item)?.cantidad || 0;
+    const oculto = categoriaActiva !== 'Todos' && (m.categoria || 'Otros') !== categoriaActiva;
+    return `
+      <div class="item-card card-blanca ${oculto ? 'categoria-oculta' : ''}" data-item="${escapeHtml(m.item)}">
+        <h3>${escapeHtml(m.item)}</h3>
+        <div class="precio">$${Number(m.precio).toFixed(2)}</div>
+        <div class="stepper">
+          <button class="menos">−</button>
+          <span class="cant">${cant}</span>
+          <button class="mas">+</button>
+        </div>
+      </div>`;
+  }).join('');
+
+  cont.querySelectorAll('.item-card').forEach(card => {
+    const nombre = card.dataset.item;
+    const menuItem = menuCache.find(m => m.item === nombre);
+    card.querySelector('.mas').addEventListener('click', () => cambiarCantidad(menuItem, 1));
+    card.querySelector('.menos').addEventListener('click', () => cambiarCantidad(menuItem, -1));
+  });
+}
+
+function cambiarCantidad(menuItem, delta) {
+  const actual = carrito.get(menuItem.item) || { ...menuItem, cantidad: 0 };
+  actual.cantidad = Math.max(0, actual.cantidad + delta);
+  if (actual.cantidad === 0) carrito.delete(menuItem.item);
+  else carrito.set(menuItem.item, actual);
+  renderMenu();
+  renderCarrito();
+}
+
+function renderCarrito() {
+  const lista = document.getElementById('carritoLista');
+  if (carrito.size === 0) {
+    lista.innerHTML = '<li class="vacio">Aún no agregas productos</li>';
+  } else {
+    lista.innerHTML = [...carrito.values()].map(it => `
+      <li>
+        <span>${it.cantidad}x ${escapeHtml(it.item)}</span>
+        <span>$${(it.cantidad * it.precio).toFixed(2)}
+          <button class="quitar" data-item="${escapeHtml(it.item)}">✕</button>
+        </span>
+      </li>`).join('');
+    lista.querySelectorAll('.quitar').forEach(btn => {
+      btn.addEventListener('click', () => {
+        carrito.delete(btn.dataset.item);
+        renderMenu();
+        renderCarrito();
+      });
+    });
+  }
+  const total = [...carrito.values()].reduce((s, it) => s + it.cantidad * it.precio, 0);
+  document.getElementById('totalTexto').textContent = total.toFixed(2);
+}
+
+function generarClienteRapido() {
+  const codigo = Math.random().toString(36).substring(2, 5).toUpperCase();
+  return `Rápido-${codigo}`;
+}
+
+document.getElementById('btnClienteRapido').addEventListener('click', () => {
+  document.getElementById('clienteInput').value = generarClienteRapido();
+});
+
+function escapeHtml(str) {
+  return String(str).replace(/[&<>"']/g, c => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+  }[c]));
+}
+
+async function enviarPedido() {
+  if (carrito.size === 0) {
+    mostrarToast('Agrega al menos un producto');
+    return;
+  }
+  const clienteInput = document.getElementById('clienteInput');
+  const cliente = clienteInput.value.trim() || generarClienteRapido();
+  const nota = document.getElementById('notaInput').value.trim();
+  const items = [...carrito.values()].map(it => ({ item: it.item, cantidad: it.cantidad, precio: it.precio }));
+  const payload = { action: 'crear_pedido', cliente, nota, items };
+
+  const btn = document.getElementById('btnEnviar');
+  btn.disabled = true;
+  const status = document.getElementById('syncStatus');
+  status.className = '';
+  status.textContent = 'Enviando...';
+
+  try {
+    const resp = await apiPost(payload);
+    if (resp.ok) {
+      status.className = 'ok';
+      status.textContent = `Pedido enviado ✔ (${resp.id})`;
+      mostrarToast('¡Pedido enviado a cocina!');
+
+      const esNuevo = !clientesCache.some(c => c.nombre.toLowerCase() === cliente.toLowerCase());
+      const esTemporal = cliente.startsWith('Rápido-');
+      if (esNuevo && !esTemporal) {
+        apiPost({ action: 'agregar_cliente', nombre: cliente }).catch(() => {});
+        clientesCache.push({ nombre: cliente, telefono: '' });
+      }
+
+      carrito.clear();
+      clienteInput.value = '';
+      document.getElementById('notaInput').value = '';
+      renderMenu();
+      renderCarrito();
+    } else {
+      throw new Error(resp.error || 'error desconocido');
+    }
+  } catch (e) {
+    guardarPendiente(payload);
+    status.className = 'error';
+    status.textContent = 'Sin conexión: pedido guardado, se enviará solo';
+    mostrarToast('Sin conexión, el pedido quedó en cola');
+    carrito.clear();
+    clienteInput.value = '';
+    document.getElementById('notaInput').value = '';
+    renderMenu();
+    renderCarrito();
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+function guardarPendiente(payload) {
+  const pendientes = JSON.parse(localStorage.getItem(CLAVE_PENDIENTES) || '[]');
+  pendientes.push(payload);
+  localStorage.setItem(CLAVE_PENDIENTES, JSON.stringify(pendientes));
+}
+
+async function reintentarPendientes() {
+  const pendientes = JSON.parse(localStorage.getItem(CLAVE_PENDIENTES) || '[]');
+  if (pendientes.length === 0) return;
+  const restantes = [];
+  for (const p of pendientes) {
+    try {
+      const resp = await apiPost(p);
+      if (!resp.ok) restantes.push(p);
+    } catch (e) {
+      restantes.push(p);
+    }
+  }
+  localStorage.setItem(CLAVE_PENDIENTES, JSON.stringify(restantes));
+  if (restantes.length === 0 && pendientes.length > 0) {
+    mostrarToast('Pedidos en cola enviados a cocina');
+  }
+}
+
+document.getElementById('btnEnviar').addEventListener('click', enviarPedido);
+
+cargarMenu();
+cargarClientes();
+setInterval(reintentarPendientes, 15000);
+</script>
+</body>
+</html>

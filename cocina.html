@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cocina - Pedidos en vivo</title>
+<link rel="stylesheet" href="styles.css">
+<style>
+  body { overflow: hidden; }
+  .columnas {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 18px;
+    padding: 18px;
+    height: calc(100vh - 96px);
+  }
+  .columna {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    min-height: 0;
+  }
+  .columna h2 {
+    margin: 0;
+    text-align: center;
+    color: var(--blanco);
+    padding: 10px;
+    border-radius: 10px;
+    font-size: 1.6rem;
+    box-shadow: var(--sombra);
+  }
+  .col-pendiente h2 { background: var(--naranja); }
+  .col-preparacion h2 { background: #cc8a00; }
+  .col-listo h2 { background: var(--verde); }
+
+  .tarjetas {
+    flex: 1;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 4px;
+  }
+
+  .pedido-card {
+    background: var(--blanco);
+    border-left: 10px solid var(--verde);
+    border-radius: 12px;
+    padding: 14px 16px;
+    box-shadow: var(--sombra);
+    cursor: pointer;
+    user-select: none;
+  }
+  .pedido-card.espera-media { border-left-color: var(--naranja); }
+  .pedido-card.espera-larga { border-left-color: #c0392b; }
+
+  .pedido-card .fila-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+  }
+  .pedido-card .cliente {
+    font-size: 1.3rem;
+    font-weight: 800;
+    color: var(--verde-oscuro);
+  }
+  .pedido-card .tiempo {
+    font-size: 1rem;
+    font-weight: 700;
+    color: #777;
+  }
+  .pedido-card .items {
+    margin-top: 6px;
+    font-size: 1.15rem;
+    line-height: 1.4;
+  }
+  .pedido-card .nota {
+    margin-top: 6px;
+    font-size: 1rem;
+    font-style: italic;
+    color: var(--naranja-oscuro);
+  }
+  .pedido-card .toca {
+    margin-top: 10px;
+    font-size: 0.85rem;
+    text-align: right;
+    color: #999;
+  }
+  .vacio-col { text-align: center; color: rgba(255,255,255,0.85); padding: 24px 0; font-size: 1.1rem; }
+  #estadoConexion {
+    font-size: 0.95rem;
+    padding: 5px 12px;
+    border-radius: 8px;
+    background: var(--blanco);
+    color: var(--verde-oscuro);
+    font-weight: 700;
+  }
+</style>
+</head>
+<body>
+
+<header class="cancha-header">
+  <h1>🍽 Cocina en vivo</h1>
+  <div style="display:flex; gap:12px; align-items:center;">
+    <div id="estadoConexion">Cargando...</div>
+    <div class="reloj" id="reloj">--:--</div>
+  </div>
+</header>
+
+<div class="columnas">
+  <div class="columna col-pendiente">
+    <h2>Pendiente</h2>
+    <div class="tarjetas" id="colPendiente"></div>
+  </div>
+  <div class="columna col-preparacion">
+    <h2>En preparación</h2>
+    <div class="tarjetas" id="colPreparacion"></div>
+  </div>
+  <div class="columna col-listo">
+    <h2>Listo</h2>
+    <div class="tarjetas" id="colListo"></div>
+  </div>
+</div>
+
+<script src="config.js"></script>
+<script>
+const SIGUIENTE_ESTADO = {
+  'Pendiente': 'En preparación',
+  'En preparación': 'Listo',
+  'Listo': 'Entregado',
+};
+const COLUMNA_POR_ESTADO = {
+  'Pendiente': 'colPendiente',
+  'En preparación': 'colPreparacion',
+  'Listo': 'colListo',
+};
+
+let pedidosActuales = [];
+
+function actualizarReloj() {
+  document.getElementById('reloj').textContent =
+    new Date().toLocaleTimeString('es', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+}
+setInterval(actualizarReloj, 1000);
+actualizarReloj();
+
+function minutosDesde(fecha, hora) {
+  const inicio = new Date(`${fecha}T${hora}`);
+  return Math.max(0, Math.floor((Date.now() - inicio.getTime()) / 60000));
+}
+
+function claseEspera(mins) {
+  if (mins >= 15) return 'espera-larga';
+  if (mins >= 8) return 'espera-media';
+  return '';
+}
+
+function renderPedidos() {
+  const columnas = { colPendiente: [], colPreparacion: [], colListo: [] };
+  pedidosActuales.forEach(p => {
+    const col = COLUMNA_POR_ESTADO[p.Estado];
+    if (col) columnas[col].push(p);
+  });
+
+  Object.entries(columnas).forEach(([colId, pedidos]) => {
+    const cont = document.getElementById(colId);
+    if (pedidos.length === 0) {
+      cont.innerHTML = '<div class="vacio-col">Sin pedidos</div>';
+      return;
+    }
+    cont.innerHTML = pedidos.map(p => {
+      const mins = minutosDesde(p.Fecha, p.Hora);
+      return `
+        <div class="pedido-card ${claseEspera(mins)}" data-id="${p.ID}" data-estado="${p.Estado}">
+          <div class="fila-top">
+            <span class="cliente">${escapeHtml(p.Cliente)}</span>
+            <span class="tiempo">${mins} min</span>
+          </div>
+          <div class="items">${escapeHtml(p.Items)}</div>
+          ${p.Nota ? `<div class="nota">📝 ${escapeHtml(p.Nota)}</div>` : ''}
+          <div class="toca">Toca para avanzar →</div>
+        </div>`;
+    }).join('');
+  });
+
+  document.querySelectorAll('.pedido-card').forEach(card => {
+    card.addEventListener('click', () => avanzarEstado(card.dataset.id, card.dataset.estado));
+  });
+}
+
+function escapeHtml(str) {
+  return String(str || '').replace(/[&<>"']/g, c => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+  }[c]));
+}
+
+async function avanzarEstado(id, estadoActual) {
+  const siguiente = SIGUIENTE_ESTADO[estadoActual];
+  if (!siguiente) return;
+  const pedido = pedidosActuales.find(p => String(p.ID) === String(id));
+  if (pedido) pedido.Estado = siguiente; // respuesta visual inmediata
+  renderPedidos();
+  try {
+    await fetch(APPS_SCRIPT_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify({ action: 'actualizar_estado', id, estado: siguiente }),
+    });
+  } catch (e) {
+    // el próximo refresco automático corrige el estado si algo falló
+  }
+  cargarPedidos();
+}
+
+async function cargarPedidos() {
+  const estadoEl = document.getElementById('estadoConexion');
+  try {
+    const res = await fetch(`${APPS_SCRIPT_URL}?action=pedidos&activos=1`);
+    const data = await res.json();
+    if (Array.isArray(data)) {
+      pedidosActuales = data;
+      renderPedidos();
+      estadoEl.textContent = '● En línea';
+      estadoEl.style.color = 'var(--verde-oscuro)';
+    }
+  } catch (e) {
+    estadoEl.textContent = '● Sin conexión';
+    estadoEl.style.color = '#c0392b';
+  }
+}
+
+// Actualiza los "min" transcurridos sin esperar al próximo fetch
+setInterval(renderPedidos, 10000);
+setInterval(cargarPedidos, 6000);
+cargarPedidos();
+</script>
+</body>
+</html>
