@@ -1,0 +1,37 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "ViewAmplifyServiceQuotas",
+      "Effect": "Allow",
+      "Action": [
+        "servicequotas:GetServiceQuota",
+        "servicequotas:ListServiceQuotas",
+        "servicequotas:GetAWSDefaultServiceQuota",
+        "servicequotas:ListAWSDefaultServiceQuotas"
+      ],
+      "Resource": "*"
+    },
+    {
+      "Sid": "RequestAmplifyQuotaIncrease",
+      "Effect": "Allow",
+      "Action": [
+        "servicequotas:RequestServiceQuotaIncrease",
+        "servicequotas:GetRequestedServiceQuotaChange",
+        "servicequotas:ListRequestedServiceQuotaChangeHistory",
+        "servicequotas:ListRequestedServiceQuotaChangeHistoryBy"
+      ],
+      "Resource": "*"
+    },
+    {
+      "Sid": "OptionalOpenSupportCaseForQuota",
+      "Effect": "Allow",
+      "Action": [
+        "support:CreateCase",
+        "support:DescribeCases",
+        "support:AddCommunicationToCase"
+      ],
+      "Resource": "*"
+    }
+  ]
+}
