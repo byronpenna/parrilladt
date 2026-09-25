@@ -19,6 +19,7 @@ interface ItemCarrito {
 
 interface PedidoPendiente {
   clienteNombre: string;
+  telefono: string;
   nota: string;
   items: { menuItemId: string; nombre: string; cantidad: number; precioUnitario: number }[];
 }
@@ -35,7 +36,9 @@ export default function TabletPage() {
   const [categoriaActiva, setCategoriaActiva] = useState('Todos');
   const [carrito, setCarrito] = useState<Map<string, ItemCarrito>>(new Map());
   const [clienteInput, setClienteInput] = useState('');
+  const [telefono, setTelefono] = useState('');
   const [nota, setNota] = useState('');
+  const [pagaCon, setPagaCon] = useState('');
   const [enviando, setEnviando] = useState(false);
   const [syncStatus, setSyncStatus] = useState<{ texto: string; tipo: '' | 'ok' | 'error' }>({
     texto: '',
@@ -104,6 +107,12 @@ export default function TabletPage() {
     });
   }
 
+  function cambiarClienteInput(valor: string) {
+    setClienteInput(valor);
+    const match = clientes.find((c) => c.nombre.toLowerCase() === valor.trim().toLowerCase());
+    if (match) setTelefono(match.telefono || '');
+  }
+
   function quitarDelCarrito(nombre: string) {
     setCarrito((prev) => {
       const next = new Map(prev);
@@ -118,6 +127,12 @@ export default function TabletPage() {
     localStorage.setItem(CLAVE_PENDIENTES, JSON.stringify(pendientes));
   }
 
+  function sincronizarTelefonoCliente(cliente: string, tel: string) {
+    const esTemporal = cliente.startsWith('Rápido-');
+    if (esTemporal || !tel.trim()) return;
+    gqlRequest(MUTATION_AGREGAR_CLIENTE, { nombre: cliente, telefono: tel.trim() }).catch(() => {});
+  }
+
   async function reintentarPendientes() {
     const pendientes: PedidoPendiente[] = JSON.parse(localStorage.getItem(CLAVE_PENDIENTES) || '[]');
     if (pendientes.length === 0) return;
@@ -125,6 +140,7 @@ export default function TabletPage() {
     for (const p of pendientes) {
       try {
         await gqlRequest(MUTATION_CREAR_PEDIDO, p);
+        sincronizarTelefonoCliente(p.clienteNombre, p.telefono);
       } catch {
         restantes.push(p);
       }
@@ -141,13 +157,14 @@ export default function TabletPage() {
       return;
     }
     const cliente = clienteInput.trim() || generarClienteRapido();
+    const tel = telefono.trim();
     const items = [...carrito.values()].map((it) => ({
       menuItemId: it.menuItemId,
       nombre: it.nombre,
       cantidad: it.cantidad,
       precioUnitario: it.precio,
     }));
-    const payload: PedidoPendiente = { clienteNombre: cliente, nota: nota.trim(), items };
+    const payload: PedidoPendiente = { clienteNombre: cliente, telefono: tel, nota: nota.trim(), items };
 
     setEnviando(true);
     setSyncStatus({ texto: 'Enviando...', tipo: '' });
@@ -158,22 +175,25 @@ export default function TabletPage() {
       mostrarToast('¡Pedido enviado a cocina!');
 
       const esNuevo = !clientes.some((c) => c.nombre.toLowerCase() === cliente.toLowerCase());
-      const esTemporal = cliente.startsWith('Rápido-');
-      if (esNuevo && !esTemporal) {
-        gqlRequest(MUTATION_AGREGAR_CLIENTE, { nombre: cliente }).catch(() => {});
-        setClientes((prev) => [...prev, { id: 'temp', nombre: cliente, telefono: '' }]);
+      sincronizarTelefonoCliente(cliente, tel);
+      if (esNuevo && !cliente.startsWith('Rápido-')) {
+        setClientes((prev) => [...prev, { id: 'temp', nombre: cliente, telefono: tel }]);
       }
 
       setCarrito(new Map());
       setClienteInput('');
+      setTelefono('');
       setNota('');
+      setPagaCon('');
     } catch {
       guardarPendiente(payload);
       setSyncStatus({ texto: 'Sin conexión: pedido guardado, se enviará solo', tipo: 'error' });
       mostrarToast('Sin conexión, el pedido quedó en cola');
       setCarrito(new Map());
       setClienteInput('');
+      setTelefono('');
       setNota('');
+      setPagaCon('');
     } finally {
       setEnviando(false);
     }
@@ -181,6 +201,9 @@ export default function TabletPage() {
 
   const categorias = ['Todos', ...new Set(menu.map((m) => m.categoria || 'Otros'))];
   const total = [...carrito.values()].reduce((s, it) => s + it.cantidad * it.precio, 0);
+  const pagaConNum = parseFloat(pagaCon);
+  const tieneMontoPago = pagaCon.trim() !== '' && !Number.isNaN(pagaConNum);
+  const vuelto = tieneMontoPago ? pagaConNum - total : 0;
 
   return (
     <>
@@ -196,14 +219,20 @@ export default function TabletPage() {
               list="clientesList"
               placeholder="Buscar o escribir cliente..."
               value={clienteInput}
-              onChange={(e) => setClienteInput(e.target.value)}
+              onChange={(e) => cambiarClienteInput(e.target.value)}
             />
             <datalist id="clientesList">
               {clientes.map((c) => (
                 <option key={c.id} value={c.nombre} />
               ))}
             </datalist>
-            <button className="btn btn-blanco" onClick={() => setClienteInput(generarClienteRapido())}>
+            <button
+              className="btn btn-blanco"
+              onClick={() => {
+                setClienteInput(generarClienteRapido());
+                setTelefono('');
+              }}
+            >
               Cliente rápido
             </button>
           </div>
@@ -264,6 +293,13 @@ export default function TabletPage() {
               ))
             )}
           </ul>
+          <input
+            id="telefonoInput"
+            type="tel"
+            placeholder="Teléfono del cliente"
+            value={telefono}
+            onChange={(e) => setTelefono(e.target.value)}
+          />
           <textarea
             id="notaInput"
             placeholder="Notas del pedido (ej: sin cebolla, para llevar...)"
@@ -271,6 +307,21 @@ export default function TabletPage() {
             onChange={(e) => setNota(e.target.value)}
           />
           <div className="total">Total: ${total.toFixed(2)}</div>
+          <input
+            id="pagaConInput"
+            type="number"
+            inputMode="decimal"
+            min="0"
+            step="0.01"
+            placeholder="¿Con cuánto paga?"
+            value={pagaCon}
+            onChange={(e) => setPagaCon(e.target.value)}
+          />
+          {tieneMontoPago && (
+            <div className={`vuelto ${vuelto < 0 ? 'falta' : ''}`}>
+              {vuelto < 0 ? `Falta: $${Math.abs(vuelto).toFixed(2)}` : `Vuelto: $${vuelto.toFixed(2)}`}
+            </div>
+          )}
           <button className="btn btn-naranja" id="btnEnviar" disabled={enviando} onClick={enviarPedido}>
             Enviar a cocina
           </button>

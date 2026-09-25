@@ -198,11 +198,24 @@ html, body {
 }
 #carritoLista .quitar { background: none; border: none; color: #c0392b; font-size: 1.2rem; cursor: pointer; }
 #carritoLista .vacio { color: #999; text-align: center; padding: 20px 0; }
+#telefonoInput {
+  width: 100%; padding: 10px 12px; font-size: 1rem;
+  border-radius: 10px; border: 2px solid #ddd;
+}
 #notaInput {
   width: 100%; min-height: 60px; border-radius: 10px; border: 2px solid #ddd;
   padding: 10px; font-size: 1rem; resize: vertical;
 }
 .total { font-size: 1.4rem; font-weight: 800; color: var(--verde-oscuro); text-align: right; }
+#pagaConInput {
+  width: 100%; padding: 10px 12px; font-size: 1.1rem; font-weight: 700;
+  border-radius: 10px; border: 2px solid var(--verde); text-align: right;
+}
+.vuelto {
+  font-size: 1.15rem; font-weight: 800; text-align: right;
+  color: var(--verde-oscuro);
+}
+.vuelto.falta { color: #b30000; }
 #btnEnviar { font-size: 1.2rem; padding: 16px; }
 #btnEnviar:disabled { opacity: 0.6; cursor: not-allowed; }
 #syncStatus { font-size: 0.85rem; text-align: center; min-height: 20px; }
