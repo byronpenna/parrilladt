@@ -1,0 +1,38 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "AssumeCdkBootstrapRolesForDeploy",
+      "Effect": "Allow",
+      "Action": "sts:AssumeRole",
+      "Resource": [
+        "arn:aws:iam::861418247819:role/cdk-hnb659fds-deploy-role-861418247819-us-east-1",
+        "arn:aws:iam::861418247819:role/cdk-hnb659fds-file-publishing-role-861418247819-us-east-1",
+        "arn:aws:iam::861418247819:role/cdk-hnb659fds-lookup-role-861418247819-us-east-1"
+      ]
+    },
+    {
+      "Sid": "ReadOwnStackStatus",
+      "Effect": "Allow",
+      "Action": [
+        "cloudformation:DescribeStacks",
+        "cloudformation:DescribeStackEvents",
+        "cloudformation:DescribeStackResources",
+        "cloudformation:GetTemplate"
+      ],
+      "Resource": "arn:aws:cloudformation:us-east-1:861418247819:stack/PedidosCancha*/*"
+    },
+    {
+      "Sid": "ReadRdsForPlanning",
+      "Effect": "Allow",
+      "Action": [
+        "rds:DescribeDBInstances",
+        "rds:DescribeDBSubnetGroups",
+        "ec2:DescribeVpcs",
+        "ec2:DescribeSubnets",
+        "ec2:DescribeSecurityGroups"
+      ],
+      "Resource": "*"
+    }
+  ]
+}

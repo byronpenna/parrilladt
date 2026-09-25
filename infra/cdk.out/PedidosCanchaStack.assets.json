@@ -1,0 +1,36 @@
+{
+  "version": "54.0.0",
+  "files": {
+    "c44e9e0613acc9bd41112cd0faf392e6f6854ca4cea0beb979031465044e9f4c": {
+      "displayName": "MigrateFn/Code",
+      "source": {
+        "path": "asset.c44e9e0613acc9bd41112cd0faf392e6f6854ca4cea0beb979031465044e9f4c",
+        "packaging": "zip"
+      },
+      "destinations": {
+        "861418247819-us-east-1-4390ae9a": {
+          "bucketName": "cdk-hnb659fds-assets-861418247819-us-east-1",
+          "objectKey": "c44e9e0613acc9bd41112cd0faf392e6f6854ca4cea0beb979031465044e9f4c.zip",
+          "region": "us-east-1",
+          "assumeRoleArn": "arn:${AWS::Partition}:iam::861418247819:role/cdk-hnb659fds-file-publishing-role-861418247819-us-east-1"
+        }
+      }
+    },
+    "4b031b09aacc2bb2961576a1681cb9b007ddfebb8d4f5a74e08d90e1a66680f1": {
+      "displayName": "PedidosCanchaStack Template",
+      "source": {
+        "path": "PedidosCanchaStack.template.json",
+        "packaging": "file"
+      },
+      "destinations": {
+        "861418247819-us-east-1-42fa3569": {
+          "bucketName": "cdk-hnb659fds-assets-861418247819-us-east-1",
+          "objectKey": "4b031b09aacc2bb2961576a1681cb9b007ddfebb8d4f5a74e08d90e1a66680f1.json",
+          "region": "us-east-1",
+          "assumeRoleArn": "arn:${AWS::Partition}:iam::861418247819:role/cdk-hnb659fds-file-publishing-role-861418247819-us-east-1"
+        }
+      }
+    }
+  },
+  "dockerImages": {}
+}

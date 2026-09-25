@@ -1,0 +1,250 @@
+{
+ "Resources": {
+  "ExistingDbSgfromPedidosCanchaStackLambdaSg0158E6E1543281B256B1": {
+   "Type": "AWS::EC2::SecurityGroupIngress",
+   "Properties": {
+    "Description": "Acceso desde Lambdas de pedidos-cancha",
+    "FromPort": 5432,
+    "GroupId": "sg-06e7140901c841def",
+    "IpProtocol": "tcp",
+    "SourceSecurityGroupId": {
+     "Fn::GetAtt": [
+      "LambdaSg30A6108C",
+      "GroupId"
+     ]
+    },
+    "ToPort": 5432
+   },
+   "Metadata": {
+    "aws:cdk:path": "PedidosCanchaStack/ExistingDbSg/from PedidosCanchaStackLambdaSg0158E6E1:5432"
+   }
+  },
+  "LambdaSg30A6108C": {
+   "Type": "AWS::EC2::SecurityGroup",
+   "Properties": {
+    "GroupDescription": "Lambdas de pedidos-cancha (migracion + API)",
+    "SecurityGroupEgress": [
+     {
+      "CidrIp": "0.0.0.0/0",
+      "Description": "Allow all outbound traffic by default",
+      "IpProtocol": "-1"
+     }
+    ],
+    "VpcId": "vpc-094df1dd2d4dedde1"
+   },
+   "Metadata": {
+    "aws:cdk:path": "PedidosCanchaStack/LambdaSg/Resource"
+   }
+  },
+  "AppDbSecretE6515E4A": {
+   "Type": "AWS::SecretsManager::Secret",
+   "Properties": {
+    "Description": "Credenciales del rol de aplicacion pedidos_cancha_app en la base pedidos_cancha",
+    "GenerateSecretString": {
+     "ExcludePunctuation": true,
+     "GenerateStringKey": "password",
+     "PasswordLength": 32,
+     "SecretStringTemplate": "{\"username\":\"pedidos_cancha_app\"}"
+    },
+    "Name": "pedidos-cancha/db-app"
+   },
+   "UpdateReplacePolicy": "Delete",
+   "DeletionPolicy": "Delete",
+   "Metadata": {
+    "aws:cdk:path": "PedidosCanchaStack/AppDbSecret/Resource"
+   }
+  },
+  "MigrateFnServiceRole1E09F297": {
+   "Type": "AWS::IAM::Role",
+   "Properties": {
+    "AssumeRolePolicyDocument": {
+     "Statement": [
+      {
+       "Action": "sts:AssumeRole",
+       "Effect": "Allow",
+       "Principal": {
+        "Service": "lambda.amazonaws.com"
+       }
+      }
+     ],
+     "Version": "2012-10-17"
+    },
+    "ManagedPolicyArns": [
+     {
+      "Fn::Join": [
+       "",
+       [
+        "arn:",
+        {
+         "Ref": "AWS::Partition"
+        },
+        ":iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
+       ]
+      ]
+     },
+     {
+      "Fn::Join": [
+       "",
+       [
+        "arn:",
+        {
+         "Ref": "AWS::Partition"
+        },
+        ":iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole"
+       ]
+      ]
+     }
+    ]
+   },
+   "Metadata": {
+    "aws:cdk:path": "PedidosCanchaStack/MigrateFn/ServiceRole/Resource"
+   }
+  },
+  "MigrateFnServiceRoleDefaultPolicyEB329C71": {
+   "Type": "AWS::IAM::Policy",
+   "Properties": {
+    "PolicyDocument": {
+     "Statement": [
+      {
+       "Action": [
+        "secretsmanager:DescribeSecret",
+        "secretsmanager:GetSecretValue"
+       ],
+       "Effect": "Allow",
+       "Resource": [
+        "arn:aws:secretsmanager:us-east-1:861418247819:secret:pedidos-cancha/db-master-temp-??????",
+        {
+         "Ref": "AppDbSecretE6515E4A"
+        }
+       ]
+      }
+     ],
+     "Version": "2012-10-17"
+    },
+    "PolicyName": "MigrateFnServiceRoleDefaultPolicyEB329C71",
+    "Roles": [
+     {
+      "Ref": "MigrateFnServiceRole1E09F297"
+     }
+    ]
+   },
+   "Metadata": {
+    "aws:cdk:path": "PedidosCanchaStack/MigrateFn/ServiceRole/DefaultPolicy/Resource"
+   }
+  },
+  "MigrateFnD91AE9F5": {
+   "Type": "AWS::Lambda::Function",
+   "Properties": {
+    "Code": {
+     "S3Bucket": "cdk-hnb659fds-assets-861418247819-us-east-1",
+     "S3Key": "c44e9e0613acc9bd41112cd0faf392e6f6854ca4cea0beb979031465044e9f4c.zip"
+    },
+    "Environment": {
+     "Variables": {
+      "DB_HOST": "aula-dev-data-databaseb269d8bb-yosamgnfda8m.c6z6usswkrab.us-east-1.rds.amazonaws.com",
+      "DB_PORT": "5432",
+      "DB_NAME": "pedidos_cancha",
+      "APP_DB_ROLE": "pedidos_cancha_app",
+      "APP_SECRET_ARN": {
+       "Ref": "AppDbSecretE6515E4A"
+      },
+      "MASTER_SECRET_ARN": "arn:aws:secretsmanager:us-east-1:861418247819:secret:pedidos-cancha/db-master-temp"
+     }
+    },
+    "FunctionName": "pedidos-cancha-migrate",
+    "Handler": "index.handler",
+    "MemorySize": 256,
+    "Role": {
+     "Fn::GetAtt": [
+      "MigrateFnServiceRole1E09F297",
+      "Arn"
+     ]
+    },
+    "Runtime": "nodejs20.x",
+    "Timeout": 60,
+    "VpcConfig": {
+     "SecurityGroupIds": [
+      {
+       "Fn::GetAtt": [
+        "LambdaSg30A6108C",
+        "GroupId"
+       ]
+      }
+     ],
+     "SubnetIds": [
+      "subnet-0bfb598419b24bf68",
+      "subnet-0fb7f8766622097f0"
+     ]
+    }
+   },
+   "DependsOn": [
+    "MigrateFnServiceRoleDefaultPolicyEB329C71",
+    "MigrateFnServiceRole1E09F297"
+   ],
+   "Metadata": {
+    "aws:cdk:path": "PedidosCanchaStack/MigrateFn/Resource",
+    "aws:asset:path": "asset.c44e9e0613acc9bd41112cd0faf392e6f6854ca4cea0beb979031465044e9f4c",
+    "aws:asset:is-bundled": true,
+    "aws:asset:property": "Code"
+   }
+  },
+  "CDKMetadata": {
+   "Type": "AWS::CDK::Metadata",
+   "Properties": {
+    "Analytics": "v2:deflate64:H4sIAAAAAAAA/12Ou27DMAxFvyU7zbrO0K5NgBZd2sD+AIORGUN+SIFIJQgE/XthJx3a6fASlwessHopsdzQVQrTjcVkj5gaJTNCzeJjMAx0lTaxqTDtT65hE4PV20fw8fzp+sAi8GcJ/1sZhE1glZkc9RwwNWt+FANrhonmY0et8x0Pgl8r3qMzar0DSzOm2k+8XKw8+Mma2xLvUwbZtiTCKvi2AGSLu2hG1h0JP/S4P7lfaYa11yj11vWL6TvqOWqG5Qcc5OlSVfj8iuVmEGuLEJ3ambG+8wff6t1EOAEAAA=="
+   },
+   "Metadata": {
+    "aws:cdk:path": "PedidosCanchaStack/CDKMetadata/Default"
+   }
+  }
+ },
+ "Outputs": {
+  "MigrateFunctionName": {
+   "Value": {
+    "Ref": "MigrateFnD91AE9F5"
+   }
+  },
+  "AppSecretArn": {
+   "Value": {
+    "Ref": "AppDbSecretE6515E4A"
+   }
+  },
+  "DbEndpoint": {
+   "Value": "aula-dev-data-databaseb269d8bb-yosamgnfda8m.c6z6usswkrab.us-east-1.rds.amazonaws.com:5432/pedidos_cancha"
+  }
+ },
+ "Parameters": {
+  "BootstrapVersion": {
+   "Type": "AWS::SSM::Parameter::Value<String>",
+   "Default": "/cdk-bootstrap/hnb659fds/version",
+   "Description": "Version of the CDK Bootstrap resources in this environment, automatically retrieved from SSM Parameter Store. [cdk:skip]"
+  }
+ },
+ "Rules": {
+  "CheckBootstrapVersion": {
+   "Assertions": [
+    {
+     "Assert": {
+      "Fn::Not": [
+       {
+        "Fn::Contains": [
+         [
+          "1",
+          "2",
+          "3",
+          "4",
+          "5"
+         ],
+         {
+          "Ref": "BootstrapVersion"
+         }
+        ]
+       }
+      ]
+     },
+     "AssertDescription": "CDK bootstrap stack version 6 required. Please run 'cdk bootstrap' with a recent version of the CDK CLI."
+    }
+   ]
+  }
+ }
+}

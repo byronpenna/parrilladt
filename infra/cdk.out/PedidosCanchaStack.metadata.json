@@ -1,0 +1,193 @@
+{
+  "/PedidosCanchaStack": [
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "<anonymous> (/Users/byron/Downloads/pedidos-cancha/infra/bin/pedidos-cancha.ts:8:1)",
+        "...node internals, ts-node, ts-node..."
+      ]
+    },
+    {
+      "type": "aws:cdk:acknowledged-rules",
+      "data": {
+        "CloudFormation-Validate::W3010": "Literal AZs in template are the result of accessing stack.availabilityZones, this is expected and safe"
+      },
+      "trace": [
+        "    ...Function.fromLookup in aws-cdk-lib...",
+        "    at new PedidosCanchaStack (/Users/byron/Downloads/pedidos-cancha/infra/lib/pedidos-cancha-stack.ts:31:25)",
+        "    at <anonymous> (/Users/byron/Downloads/pedidos-cancha/infra/bin/pedidos-cancha.ts:8:1)",
+        "    ...node internals, ts-node, ts-node..."
+      ]
+    }
+  ],
+  "/PedidosCanchaStack/MigrateFunctionName": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "MigrateFunctionName"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "new PedidosCanchaStack (/Users/byron/Downloads/pedidos-cancha/infra/lib/pedidos-cancha-stack.ts:111:5)",
+        "<anonymous> (/Users/byron/Downloads/pedidos-cancha/infra/bin/pedidos-cancha.ts:8:1)",
+        "...node internals, ts-node, ts-node..."
+      ]
+    }
+  ],
+  "/PedidosCanchaStack/AppSecretArn": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "AppSecretArn"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "new PedidosCanchaStack (/Users/byron/Downloads/pedidos-cancha/infra/lib/pedidos-cancha-stack.ts:112:5)",
+        "<anonymous> (/Users/byron/Downloads/pedidos-cancha/infra/bin/pedidos-cancha.ts:8:1)",
+        "...node internals, ts-node, ts-node..."
+      ]
+    }
+  ],
+  "/PedidosCanchaStack/DbEndpoint": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "DbEndpoint"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "new PedidosCanchaStack (/Users/byron/Downloads/pedidos-cancha/infra/lib/pedidos-cancha-stack.ts:113:5)",
+        "<anonymous> (/Users/byron/Downloads/pedidos-cancha/infra/bin/pedidos-cancha.ts:8:1)",
+        "...node internals, ts-node, ts-node..."
+      ]
+    }
+  ],
+  "/PedidosCanchaStack/BootstrapVersion": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "BootstrapVersion"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...aws-cdk-lib...",
+        "(no user code in 10 frames, use --stack-trace-limit to capture more)"
+      ]
+    }
+  ],
+  "/PedidosCanchaStack/CheckBootstrapVersion": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "CheckBootstrapVersion"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...aws-cdk-lib...",
+        "(no user code in 10 frames, use --stack-trace-limit to capture more)"
+      ]
+    }
+  ],
+  "/PedidosCanchaStack/ExistingDbSg/from PedidosCanchaStackLambdaSg0158E6E1:5432": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "ExistingDbSgfromPedidosCanchaStackLambdaSg0158E6E1543281B256B1"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...MutableImport.addIngressRule in aws-cdk-lib...",
+        "new PedidosCanchaStack (/Users/byron/Downloads/pedidos-cancha/infra/lib/pedidos-cancha-stack.ts:43:21)",
+        "<anonymous> (/Users/byron/Downloads/pedidos-cancha/infra/bin/pedidos-cancha.ts:8:1)",
+        "...node internals, ts-node, ts-node..."
+      ]
+    }
+  ],
+  "/PedidosCanchaStack/LambdaSg/Resource": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "LambdaSg30A6108C"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...new SecurityGroup2 in aws-cdk-lib...",
+        "new PedidosCanchaStack (/Users/byron/Downloads/pedidos-cancha/infra/lib/pedidos-cancha-stack.ts:37:33)",
+        "<anonymous> (/Users/byron/Downloads/pedidos-cancha/infra/bin/pedidos-cancha.ts:8:1)",
+        "...node internals, ts-node, ts-node..."
+      ]
+    }
+  ],
+  "/PedidosCanchaStack/AppDbSecret/Resource": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "AppDbSecretE6515E4A"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...new Secret2 in aws-cdk-lib...",
+        "new PedidosCanchaStack (/Users/byron/Downloads/pedidos-cancha/infra/lib/pedidos-cancha-stack.ts:52:23)",
+        "<anonymous> (/Users/byron/Downloads/pedidos-cancha/infra/bin/pedidos-cancha.ts:8:1)",
+        "...node internals, ts-node, ts-node..."
+      ]
+    }
+  ],
+  "/PedidosCanchaStack/MigrateFn/Resource": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "MigrateFnD91AE9F5"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...new NodejsFunction in aws-cdk-lib...",
+        "new PedidosCanchaStack (/Users/byron/Downloads/pedidos-cancha/infra/lib/pedidos-cancha-stack.ts:77:23)",
+        "<anonymous> (/Users/byron/Downloads/pedidos-cancha/infra/bin/pedidos-cancha.ts:8:1)",
+        "...node internals, ts-node, ts-node..."
+      ]
+    }
+  ],
+  "/PedidosCanchaStack/CDKMetadata/Default": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "CDKMetadata"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...aws-cdk-lib, node internals...",
+        "(no user code in 10 frames, use --stack-trace-limit to capture more)"
+      ]
+    }
+  ],
+  "/PedidosCanchaStack/MigrateFn/ServiceRole/Resource": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "MigrateFnServiceRole1E09F297"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...new NodejsFunction in aws-cdk-lib...",
+        "new PedidosCanchaStack (/Users/byron/Downloads/pedidos-cancha/infra/lib/pedidos-cancha-stack.ts:77:23)",
+        "<anonymous> (/Users/byron/Downloads/pedidos-cancha/infra/bin/pedidos-cancha.ts:8:1)",
+        "...node internals, ts-node..."
+      ]
+    }
+  ],
+  "/PedidosCanchaStack/MigrateFn/ServiceRole/DefaultPolicy/Resource": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "MigrateFnServiceRoleDefaultPolicyEB329C71"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "...WrappedClass.grantRead in aws-cdk-lib...",
+        "new PedidosCanchaStack (/Users/byron/Downloads/pedidos-cancha/infra/lib/pedidos-cancha-stack.ts:108:15)",
+        "<anonymous> (/Users/byron/Downloads/pedidos-cancha/infra/bin/pedidos-cancha.ts:8:1)"
+      ]
+    }
+  ]
+}
