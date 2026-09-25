@@ -23,6 +23,12 @@
       "Resource": "arn:aws:cloudformation:us-east-1:861418247819:stack/PedidosCancha*/*"
     },
     {
+      "Sid": "InvokeMigrationLambda",
+      "Effect": "Allow",
+      "Action": "lambda:InvokeFunction",
+      "Resource": "arn:aws:lambda:us-east-1:861418247819:function:pedidos-cancha-migrate"
+    },
+    {
       "Sid": "ReadRdsForPlanning",
       "Effect": "Allow",
       "Action": [

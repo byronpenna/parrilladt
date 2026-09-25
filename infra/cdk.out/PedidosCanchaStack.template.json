@@ -112,7 +112,7 @@
        ],
        "Effect": "Allow",
        "Resource": [
-        "arn:aws:secretsmanager:us-east-1:861418247819:secret:pedidos-cancha/db-master-temp-??????",
+        "arn:aws:secretsmanager:us-east-1:861418247819:secret:aula/dev/db-credentials-??????",
         {
          "Ref": "AppDbSecretE6515E4A"
         }
@@ -148,7 +148,7 @@
       "APP_SECRET_ARN": {
        "Ref": "AppDbSecretE6515E4A"
       },
-      "MASTER_SECRET_ARN": "arn:aws:secretsmanager:us-east-1:861418247819:secret:pedidos-cancha/db-master-temp"
+      "MASTER_SECRET_ARN": "arn:aws:secretsmanager:us-east-1:861418247819:secret:aula/dev/db-credentials"
      }
     },
     "FunctionName": "pedidos-cancha-migrate",

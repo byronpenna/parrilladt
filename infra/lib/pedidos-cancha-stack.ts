@@ -18,11 +18,11 @@ const EXISTING_DB_PORT = 5432;
 const APP_DB_NAME = 'pedidos_cancha';
 const APP_DB_ROLE = 'pedidos_cancha_app';
 
-// Secret creado manualmente por el usuario con las credenciales MASTER de la
-// instancia (usuario "aula_app"), solo para que la migración pueda crear la
-// base/rol nuevos. No lo crea este stack: no queremos que CDK gestione (ni
-// pueda borrar) la contraseña maestra de una instancia compartida.
-const MASTER_SECRET_NAME = 'pedidos-cancha/db-master-temp';
+// Secret existente del proyecto "aula" con las credenciales MASTER de la
+// instancia (usuario "aula_app"), reusado solo para que la migración pueda
+// crear la base/rol nuevos. No lo crea ni lo gestiona este stack: es del
+// otro proyecto, solo lo leemos (GetSecretValue) durante la migración.
+const MASTER_SECRET_NAME = 'aula/dev/db-credentials';
 
 export class PedidosCanchaStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props?: cdk.StackProps) {
