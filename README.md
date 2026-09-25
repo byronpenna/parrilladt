@@ -1,4 +1,4 @@
-# Toma de Pedidos - Cancha
+# Toma de Pedidos - Cancha 
 
 Sistema básico de toma de pedidos que guarda todo en una Google Sheet
 (sin base de datos). Pensado para usarse en una **tablet** (mesero toma el
