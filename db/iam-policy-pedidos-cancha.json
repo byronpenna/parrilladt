@@ -29,6 +29,12 @@
       "Resource": "arn:aws:lambda:us-east-1:861418247819:function:pedidos-cancha-migrate"
     },
     {
+      "Sid": "InvokeGraphqlLambda",
+      "Effect": "Allow",
+      "Action": "lambda:InvokeFunction",
+      "Resource": "arn:aws:lambda:us-east-1:861418247819:function:pedidos-cancha-graphql"
+    },
+    {
       "Sid": "ReadRdsForPlanning",
       "Effect": "Allow",
       "Action": [
@@ -50,6 +56,15 @@
         "ssm:ListCommandInvocations"
       ],
       "Resource": "*"
+    },
+    {
+      "Sid": "ConfigureVpnBastionViaSsm",
+      "Effect": "Allow",
+      "Action": "ssm:SendCommand",
+      "Resource": [
+        "arn:aws:ec2:us-east-1:861418247819:instance/i-00ec2785a2eab1bc9",
+        "arn:aws:ssm:us-east-1::document/AWS-RunShellScript"
+      ]
     }
   ]
 }

@@ -109,7 +109,38 @@ export class PedidosCanchaStack extends cdk.Stack {
     appSecret.grantRead(migrateFn);
     masterSecret.grantRead(migrateFn);
 
+    // Lambda de GraphQL: recibe { query, variables } invocada directo por
+    // Next.js via SDK (sin API Gateway ni Function URL, no queda expuesta
+    // a internet).
+    const graphqlFn = new NodejsFunction(this, 'GraphqlFn', {
+      functionName: 'pedidos-cancha-graphql',
+      entry: path.join(__dirname, '../lambda/graphql/index.ts'),
+      handler: 'handler',
+      runtime: lambda.Runtime.NODEJS_20_X,
+      timeout: cdk.Duration.seconds(15),
+      memorySize: 256,
+      vpc,
+      vpcSubnets: { subnetType: ec2.SubnetType.PRIVATE_WITH_EGRESS },
+      securityGroups: [lambdaSecurityGroup],
+      environment: lambdaEnv,
+    });
+    appSecret.grantRead(graphqlFn);
+
+    // Rol que asume el compute SSR de Amplify Hosting (app "pedidos-cancha"
+    // en us-east-2) para poder invocar este Lambda desde /api/graphql.
+    // IAM es global, así que este rol se puede crear desde el stack en
+    // us-east-1 aunque la app de Amplify viva en otra región.
+    const amplifySsrRole = new iam.Role(this, 'AmplifySsrComputeRole', {
+      roleName: 'pedidos-cancha-amplify-ssr',
+      assumedBy: new iam.ServicePrincipal('amplify.amazonaws.com'),
+      description: 'Compute role del SSR de Next.js en Amplify Hosting para invocar el Lambda GraphQL',
+    });
+    graphqlFn.grantInvoke(amplifySsrRole);
+
     new cdk.CfnOutput(this, 'MigrateFunctionName', { value: migrateFn.functionName });
+    new cdk.CfnOutput(this, 'GraphqlFunctionName', { value: graphqlFn.functionName });
+    new cdk.CfnOutput(this, 'GraphqlFunctionArn', { value: graphqlFn.functionArn });
+    new cdk.CfnOutput(this, 'AmplifySsrComputeRoleArn', { value: amplifySsrRole.roleArn });
     new cdk.CfnOutput(this, 'AppSecretArn', { value: appSecret.secretArn });
     new cdk.CfnOutput(this, 'DbEndpoint', { value: `${EXISTING_DB_ENDPOINT}:${EXISTING_DB_PORT}/${APP_DB_NAME}` });
 

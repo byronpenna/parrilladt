@@ -32,6 +32,24 @@
                 "<anonymous> (/Users/byron/Downloads/pedidos-cancha/infra/bin/pedidos-cancha.ts:8:1)",
                 "...node internals, ts-node, ts-node..."
               ]
+            },
+            {
+              "constructPath": "PedidosCanchaStack/GraphqlFn/Resource",
+              "constructFqn": "aws-cdk-lib.aws_lambda.CfnFunction",
+              "libraryVersion": "2.270.0",
+              "cloudFormationResource": {
+                "templatePath": "PedidosCanchaStack.template.json",
+                "logicalId": "GraphqlFn018D1285",
+                "propertyPaths": [
+                  "Properties.Runtime"
+                ]
+              },
+              "stackTraces": [
+                "...new NodejsFunction in aws-cdk-lib...",
+                "new PedidosCanchaStack (/Users/byron/Downloads/pedidos-cancha/infra/lib/pedidos-cancha-stack.ts:115:23)",
+                "<anonymous> (/Users/byron/Downloads/pedidos-cancha/infra/bin/pedidos-cancha.ts:8:1)",
+                "...node internals, ts-node, ts-node..."
+              ]
             }
           ]
         }

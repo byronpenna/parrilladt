@@ -207,6 +207,203 @@
     "aws:asset:property": "Code"
    }
   },
+  "GraphqlFnServiceRole64237BF6": {
+   "Type": "AWS::IAM::Role",
+   "Properties": {
+    "AssumeRolePolicyDocument": {
+     "Statement": [
+      {
+       "Action": "sts:AssumeRole",
+       "Effect": "Allow",
+       "Principal": {
+        "Service": "lambda.amazonaws.com"
+       }
+      }
+     ],
+     "Version": "2012-10-17"
+    },
+    "ManagedPolicyArns": [
+     {
+      "Fn::Join": [
+       "",
+       [
+        "arn:",
+        {
+         "Ref": "AWS::Partition"
+        },
+        ":iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
+       ]
+      ]
+     },
+     {
+      "Fn::Join": [
+       "",
+       [
+        "arn:",
+        {
+         "Ref": "AWS::Partition"
+        },
+        ":iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole"
+       ]
+      ]
+     }
+    ]
+   },
+   "Metadata": {
+    "aws:cdk:path": "PedidosCanchaStack/GraphqlFn/ServiceRole/Resource"
+   }
+  },
+  "GraphqlFnServiceRoleDefaultPolicy09348957": {
+   "Type": "AWS::IAM::Policy",
+   "Properties": {
+    "PolicyDocument": {
+     "Statement": [
+      {
+       "Action": [
+        "secretsmanager:DescribeSecret",
+        "secretsmanager:GetSecretValue"
+       ],
+       "Effect": "Allow",
+       "Resource": {
+        "Ref": "AppDbSecretE6515E4A"
+       }
+      }
+     ],
+     "Version": "2012-10-17"
+    },
+    "PolicyName": "GraphqlFnServiceRoleDefaultPolicy09348957",
+    "Roles": [
+     {
+      "Ref": "GraphqlFnServiceRole64237BF6"
+     }
+    ]
+   },
+   "Metadata": {
+    "aws:cdk:path": "PedidosCanchaStack/GraphqlFn/ServiceRole/DefaultPolicy/Resource"
+   }
+  },
+  "GraphqlFn018D1285": {
+   "Type": "AWS::Lambda::Function",
+   "Properties": {
+    "Code": {
+     "S3Bucket": "cdk-hnb659fds-assets-861418247819-us-east-1",
+     "S3Key": "21c9d9a4d82e2487b318bfa654717e01e011236eb7cf3b147fecf7f0f81991c8.zip"
+    },
+    "Environment": {
+     "Variables": {
+      "DB_HOST": "aula-dev-data-databaseb269d8bb-yosamgnfda8m.c6z6usswkrab.us-east-1.rds.amazonaws.com",
+      "DB_PORT": "5432",
+      "DB_NAME": "pedidos_cancha",
+      "APP_DB_ROLE": "pedidos_cancha_app",
+      "APP_SECRET_ARN": {
+       "Ref": "AppDbSecretE6515E4A"
+      }
+     }
+    },
+    "FunctionName": "pedidos-cancha-graphql",
+    "Handler": "index.handler",
+    "MemorySize": 256,
+    "Role": {
+     "Fn::GetAtt": [
+      "GraphqlFnServiceRole64237BF6",
+      "Arn"
+     ]
+    },
+    "Runtime": "nodejs20.x",
+    "Timeout": 15,
+    "VpcConfig": {
+     "SecurityGroupIds": [
+      {
+       "Fn::GetAtt": [
+        "LambdaSg30A6108C",
+        "GroupId"
+       ]
+      }
+     ],
+     "SubnetIds": [
+      "subnet-0bfb598419b24bf68",
+      "subnet-0fb7f8766622097f0"
+     ]
+    }
+   },
+   "DependsOn": [
+    "GraphqlFnServiceRoleDefaultPolicy09348957",
+    "GraphqlFnServiceRole64237BF6"
+   ],
+   "Metadata": {
+    "aws:cdk:path": "PedidosCanchaStack/GraphqlFn/Resource",
+    "aws:asset:path": "asset.21c9d9a4d82e2487b318bfa654717e01e011236eb7cf3b147fecf7f0f81991c8",
+    "aws:asset:is-bundled": true,
+    "aws:asset:property": "Code"
+   }
+  },
+  "AmplifySsrComputeRoleFB63CA7A": {
+   "Type": "AWS::IAM::Role",
+   "Properties": {
+    "AssumeRolePolicyDocument": {
+     "Statement": [
+      {
+       "Action": "sts:AssumeRole",
+       "Effect": "Allow",
+       "Principal": {
+        "Service": "amplify.amazonaws.com"
+       }
+      }
+     ],
+     "Version": "2012-10-17"
+    },
+    "Description": "Compute role del SSR de Next.js en Amplify Hosting para invocar el Lambda GraphQL",
+    "RoleName": "pedidos-cancha-amplify-ssr"
+   },
+   "Metadata": {
+    "aws:cdk:path": "PedidosCanchaStack/AmplifySsrComputeRole/Resource"
+   }
+  },
+  "AmplifySsrComputeRoleDefaultPolicyE92ACA8A": {
+   "Type": "AWS::IAM::Policy",
+   "Properties": {
+    "PolicyDocument": {
+     "Statement": [
+      {
+       "Action": "lambda:InvokeFunction",
+       "Effect": "Allow",
+       "Resource": [
+        {
+         "Fn::GetAtt": [
+          "GraphqlFn018D1285",
+          "Arn"
+         ]
+        },
+        {
+         "Fn::Join": [
+          "",
+          [
+           {
+            "Fn::GetAtt": [
+             "GraphqlFn018D1285",
+             "Arn"
+            ]
+           },
+           ":*"
+          ]
+         ]
+        }
+       ]
+      }
+     ],
+     "Version": "2012-10-17"
+    },
+    "PolicyName": "AmplifySsrComputeRoleDefaultPolicyE92ACA8A",
+    "Roles": [
+     {
+      "Ref": "AmplifySsrComputeRoleFB63CA7A"
+     }
+    ]
+   },
+   "Metadata": {
+    "aws:cdk:path": "PedidosCanchaStack/AmplifySsrComputeRole/DefaultPolicy/Resource"
+   }
+  },
   "VpnServerSg7EAEB16C": {
    "Type": "AWS::EC2::SecurityGroup",
    "Properties": {
@@ -375,6 +572,27 @@
   "MigrateFunctionName": {
    "Value": {
     "Ref": "MigrateFnD91AE9F5"
+   }
+  },
+  "GraphqlFunctionName": {
+   "Value": {
+    "Ref": "GraphqlFn018D1285"
+   }
+  },
+  "GraphqlFunctionArn": {
+   "Value": {
+    "Fn::GetAtt": [
+     "GraphqlFn018D1285",
+     "Arn"
+    ]
+   }
+  },
+  "AmplifySsrComputeRoleArn": {
+   "Value": {
+    "Fn::GetAtt": [
+     "AmplifySsrComputeRoleFB63CA7A",
+     "Arn"
+    ]
    }
   },
   "AppSecretArn": {
