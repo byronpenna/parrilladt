@@ -65,6 +65,15 @@
         "arn:aws:ec2:us-east-1:861418247819:instance/i-00ec2785a2eab1bc9",
         "arn:aws:ssm:us-east-1::document/AWS-RunShellScript"
       ]
+    },
+    {
+      "Sid": "PassAmplifySsrComputeRole",
+      "Effect": "Allow",
+      "Action": "iam:PassRole",
+      "Resource": "arn:aws:iam::861418247819:role/pedidos-cancha-amplify-ssr",
+      "Condition": {
+        "StringEquals": { "iam:PassedToService": "amplify.amazonaws.com" }
+      }
     }
   ]
 }
