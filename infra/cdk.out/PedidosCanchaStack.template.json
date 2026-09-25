@@ -19,6 +19,25 @@
     "aws:cdk:path": "PedidosCanchaStack/ExistingDbSg/from PedidosCanchaStackLambdaSg0158E6E1:5432"
    }
   },
+  "ExistingDbSgfromPedidosCanchaStackVpnServerSg38176531543283E1D944": {
+   "Type": "AWS::EC2::SecurityGroupIngress",
+   "Properties": {
+    "Description": "Acceso desde el bastion OpenVPN de pedidos-cancha",
+    "FromPort": 5432,
+    "GroupId": "sg-06e7140901c841def",
+    "IpProtocol": "tcp",
+    "SourceSecurityGroupId": {
+     "Fn::GetAtt": [
+      "VpnServerSg7EAEB16C",
+      "GroupId"
+     ]
+    },
+    "ToPort": 5432
+   },
+   "Metadata": {
+    "aws:cdk:path": "PedidosCanchaStack/ExistingDbSg/from PedidosCanchaStackVpnServerSg38176531:5432"
+   }
+  },
   "LambdaSg30A6108C": {
    "Type": "AWS::EC2::SecurityGroup",
    "Properties": {
@@ -188,10 +207,164 @@
     "aws:asset:property": "Code"
    }
   },
+  "VpnServerSg7EAEB16C": {
+   "Type": "AWS::EC2::SecurityGroup",
+   "Properties": {
+    "GroupDescription": "Bastion OpenVPN de pedidos-cancha",
+    "SecurityGroupEgress": [
+     {
+      "CidrIp": "0.0.0.0/0",
+      "Description": "Allow all outbound traffic by default",
+      "IpProtocol": "-1"
+     }
+    ],
+    "SecurityGroupIngress": [
+     {
+      "CidrIp": "0.0.0.0/0",
+      "Description": "OpenVPN clients",
+      "FromPort": 1194,
+      "IpProtocol": "udp",
+      "ToPort": 1194
+     }
+    ],
+    "VpcId": "vpc-094df1dd2d4dedde1"
+   },
+   "Metadata": {
+    "aws:cdk:path": "PedidosCanchaStack/VpnServerSg/Resource"
+   }
+  },
+  "VpnClientConfigSecretD1A64CC8": {
+   "Type": "AWS::SecretsManager::Secret",
+   "Properties": {
+    "Description": "Archivo .ovpn generado por el bastion para conectarse a la VPC de pedidos-cancha",
+    "Name": "pedidos-cancha/vpn-client-config",
+    "SecretString": "PENDING_SETUP"
+   },
+   "UpdateReplacePolicy": "Delete",
+   "DeletionPolicy": "Delete",
+   "Metadata": {
+    "aws:cdk:path": "PedidosCanchaStack/VpnClientConfigSecret/Resource"
+   }
+  },
+  "VpnInstanceRoleBF438293": {
+   "Type": "AWS::IAM::Role",
+   "Properties": {
+    "AssumeRolePolicyDocument": {
+     "Statement": [
+      {
+       "Action": "sts:AssumeRole",
+       "Effect": "Allow",
+       "Principal": {
+        "Service": "ec2.amazonaws.com"
+       }
+      }
+     ],
+     "Version": "2012-10-17"
+    },
+    "ManagedPolicyArns": [
+     {
+      "Fn::Join": [
+       "",
+       [
+        "arn:",
+        {
+         "Ref": "AWS::Partition"
+        },
+        ":iam::aws:policy/AmazonSSMManagedInstanceCore"
+       ]
+      ]
+     }
+    ]
+   },
+   "Metadata": {
+    "aws:cdk:path": "PedidosCanchaStack/VpnInstanceRole/Resource"
+   }
+  },
+  "VpnInstanceRoleDefaultPolicy7F80A60F": {
+   "Type": "AWS::IAM::Policy",
+   "Properties": {
+    "PolicyDocument": {
+     "Statement": [
+      {
+       "Action": [
+        "secretsmanager:PutSecretValue",
+        "secretsmanager:UpdateSecret",
+        "secretsmanager:UpdateSecretVersionStage"
+       ],
+       "Effect": "Allow",
+       "Resource": {
+        "Ref": "VpnClientConfigSecretD1A64CC8"
+       }
+      }
+     ],
+     "Version": "2012-10-17"
+    },
+    "PolicyName": "VpnInstanceRoleDefaultPolicy7F80A60F",
+    "Roles": [
+     {
+      "Ref": "VpnInstanceRoleBF438293"
+     }
+    ]
+   },
+   "Metadata": {
+    "aws:cdk:path": "PedidosCanchaStack/VpnInstanceRole/DefaultPolicy/Resource"
+   }
+  },
+  "VpnBastionInstanceProfile7DDDC97C": {
+   "Type": "AWS::IAM::InstanceProfile",
+   "Properties": {
+    "Roles": [
+     {
+      "Ref": "VpnInstanceRoleBF438293"
+     }
+    ]
+   },
+   "Metadata": {
+    "aws:cdk:path": "PedidosCanchaStack/VpnBastion/InstanceProfile"
+   }
+  },
+  "VpnBastion4C0CF55F": {
+   "Type": "AWS::EC2::Instance",
+   "Properties": {
+    "AvailabilityZone": "us-east-1a",
+    "IamInstanceProfile": {
+     "Ref": "VpnBastionInstanceProfile7DDDC97C"
+    },
+    "ImageId": {
+     "Ref": "SsmParameterValueawsserviceamiamazonlinuxlatestal2023amikernel61x8664C96584B6F00A464EAD1953AFF4B05118Parameter"
+    },
+    "InstanceType": "t3.micro",
+    "SecurityGroupIds": [
+     {
+      "Fn::GetAtt": [
+       "VpnServerSg7EAEB16C",
+       "GroupId"
+      ]
+     }
+    ],
+    "SubnetId": "subnet-0eeec05f7f2fb2691",
+    "Tags": [
+     {
+      "Key": "Name",
+      "Value": "PedidosCanchaStack/VpnBastion"
+     }
+    ],
+    "UserData": {
+     "Fn::Base64": "#!/bin/bash"
+    }
+   },
+   "DependsOn": [
+    "VpnInstanceRoleDefaultPolicy7F80A60F",
+    "VpnInstanceRoleBF438293"
+   ],
+   "Metadata": {
+    "aws:cdk:path": "PedidosCanchaStack/VpnBastion/Resource"
+   }
+  },
   "CDKMetadata": {
    "Type": "AWS::CDK::Metadata",
    "Properties": {
-    "Analytics": "v2:deflate64:H4sIAAAAAAAA/12Ou27DMAxFvyU7zbrO0K5NgBZd2sD+AIORGUN+SIFIJQgE/XthJx3a6fASlwessHopsdzQVQrTjcVkj5gaJTNCzeJjMAx0lTaxqTDtT65hE4PV20fw8fzp+sAi8GcJ/1sZhE1glZkc9RwwNWt+FANrhonmY0et8x0Pgl8r3qMzar0DSzOm2k+8XKw8+Mma2xLvUwbZtiTCKvi2AGSLu2hG1h0JP/S4P7lfaYa11yj11vWL6TvqOWqG5Qcc5OlSVfj8iuVmEGuLEJ3ambG+8wff6t1EOAEAAA=="
+    "Analytics": "v2:deflate64:H4sIAAAAAAAA/11Oy27DMAz7lt4dLUsP23UtsKKXLUg+IFAdJXAedmHJK4og/z7YazBsJ1ISRbKA4iWHfIc3znQ7ZpO5wFIL6lFVxC54TQpv3CykC1iOna1JB2/kfvIuXM+298Ss/izVf5U6Wxa0muJl46ti0p6EZ7TYk4elTvPj25OsasL50mJjXUsDw0eC92C1GGeVwRmWyk3JNWHpJqPvcfxlW1zpXWemmLpvkJmE4S2C4j0cgh5JDsj0SIRjZ7ecVSVdLdgb20fLzyDXkHqW6HEmIb+q2BEGfvoqCnh+hXw3sDGZD1bMTFD94DcLC4G7bQEAAA=="
    },
    "Metadata": {
     "aws:cdk:path": "PedidosCanchaStack/CDKMetadata/Default"
@@ -211,9 +384,31 @@
   },
   "DbEndpoint": {
    "Value": "aula-dev-data-databaseb269d8bb-yosamgnfda8m.c6z6usswkrab.us-east-1.rds.amazonaws.com:5432/pedidos_cancha"
+  },
+  "VpnInstanceId": {
+   "Value": {
+    "Ref": "VpnBastion4C0CF55F"
+   }
+  },
+  "VpnPublicIp": {
+   "Value": {
+    "Fn::GetAtt": [
+     "VpnBastion4C0CF55F",
+     "PublicIp"
+    ]
+   }
+  },
+  "VpnClientConfigSecretArn": {
+   "Value": {
+    "Ref": "VpnClientConfigSecretD1A64CC8"
+   }
   }
  },
  "Parameters": {
+  "SsmParameterValueawsserviceamiamazonlinuxlatestal2023amikernel61x8664C96584B6F00A464EAD1953AFF4B05118Parameter": {
+   "Type": "AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>",
+   "Default": "/aws/service/ami-amazon-linux-latest/al2023-ami-kernel-6.1-x86_64"
+  },
   "BootstrapVersion": {
    "Type": "AWS::SSM::Parameter::Value<String>",
    "Default": "/cdk-bootstrap/hnb659fds/version",

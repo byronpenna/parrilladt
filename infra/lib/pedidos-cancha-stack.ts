@@ -1,5 +1,6 @@
 import * as cdk from 'aws-cdk-lib';
 import * as ec2 from 'aws-cdk-lib/aws-ec2';
+import * as iam from 'aws-cdk-lib/aws-iam';
 import * as rds from 'aws-cdk-lib/aws-rds';
 import * as secretsmanager from 'aws-cdk-lib/aws-secretsmanager';
 import { NodejsFunction } from 'aws-cdk-lib/aws-lambda-nodejs';
@@ -111,5 +112,48 @@ export class PedidosCanchaStack extends cdk.Stack {
     new cdk.CfnOutput(this, 'MigrateFunctionName', { value: migrateFn.functionName });
     new cdk.CfnOutput(this, 'AppSecretArn', { value: appSecret.secretArn });
     new cdk.CfnOutput(this, 'DbEndpoint', { value: `${EXISTING_DB_ENDPOINT}:${EXISTING_DB_PORT}/${APP_DB_NAME}` });
+
+    // ── Bastion OpenVPN: acceso puntual a la RDS privada para debug/consultas.
+    // Sin SSH: administracion via SSM Session Manager, y el .ovpn final se
+    // publica en un secret que yo no puedo escribir directo (solo la propia
+    // instancia, con su rol), para no manejar la clave privada del cliente
+    // a mano en la conversacion.
+    const vpnSecurityGroup = new ec2.SecurityGroup(this, 'VpnServerSg', {
+      vpc,
+      description: 'Bastion OpenVPN de pedidos-cancha',
+      allowAllOutbound: true,
+    });
+    vpnSecurityGroup.addIngressRule(ec2.Peer.anyIpv4(), ec2.Port.udp(1194), 'OpenVPN clients');
+
+    dbSecurityGroup.addIngressRule(
+      vpnSecurityGroup,
+      ec2.Port.tcp(EXISTING_DB_PORT),
+      'Acceso desde el bastion OpenVPN de pedidos-cancha'
+    );
+
+    const vpnClientConfigSecret = new secretsmanager.Secret(this, 'VpnClientConfigSecret', {
+      secretName: 'pedidos-cancha/vpn-client-config',
+      description: 'Archivo .ovpn generado por el bastion para conectarse a la VPC de pedidos-cancha',
+      secretStringValue: cdk.SecretValue.unsafePlainText('PENDING_SETUP'),
+    });
+
+    const vpnInstanceRole = new iam.Role(this, 'VpnInstanceRole', {
+      assumedBy: new iam.ServicePrincipal('ec2.amazonaws.com'),
+      managedPolicies: [iam.ManagedPolicy.fromAwsManagedPolicyName('AmazonSSMManagedInstanceCore')],
+    });
+    vpnClientConfigSecret.grantWrite(vpnInstanceRole);
+
+    const vpnInstance = new ec2.Instance(this, 'VpnBastion', {
+      vpc,
+      vpcSubnets: { subnetType: ec2.SubnetType.PUBLIC },
+      instanceType: ec2.InstanceType.of(ec2.InstanceClass.T3, ec2.InstanceSize.MICRO),
+      machineImage: ec2.MachineImage.latestAmazonLinux2023(),
+      securityGroup: vpnSecurityGroup,
+      role: vpnInstanceRole,
+    });
+
+    new cdk.CfnOutput(this, 'VpnInstanceId', { value: vpnInstance.instanceId });
+    new cdk.CfnOutput(this, 'VpnPublicIp', { value: vpnInstance.instancePublicIp });
+    new cdk.CfnOutput(this, 'VpnClientConfigSecretArn', { value: vpnClientConfigSecret.secretArn });
   }
 }
