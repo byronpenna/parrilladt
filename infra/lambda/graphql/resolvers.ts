@@ -146,4 +146,27 @@ export const rootValue = {
     );
     return res.rows[0];
   },
+
+  agregarProductosMenu: async ({
+    items,
+  }: {
+    items: { nombre: string; categoria: string; precio: number }[];
+  }) => {
+    const pool = await getPool();
+    const insertados: { id: string; nombre: string; categoria: string; precio: number }[] = [];
+    for (const it of items) {
+      const nombre = it.nombre.trim();
+      if (!nombre) continue;
+      const res = await pool.query(
+        `INSERT INTO menu_items (nombre, categoria, precio) VALUES ($1, $2, $3)
+         ON CONFLICT (nombre) DO NOTHING
+         RETURNING id, nombre, categoria, precio`,
+        [nombre, it.categoria.trim(), it.precio]
+      );
+      if (res.rowCount && res.rowCount > 0) {
+        insertados.push({ ...res.rows[0], precio: Number(res.rows[0].precio) });
+      }
+    }
+    return insertados;
+  },
 };

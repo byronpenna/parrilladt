@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useEffect, useRef, useState } from 'react';
 import { gqlRequest } from '@/lib/graphql-client';
 import { QUERY_MENU, QUERY_CLIENTES, MUTATION_CREAR_PEDIDO, MUTATION_AGREGAR_CLIENTE } from '@/lib/queries';
@@ -209,7 +210,12 @@ export default function TabletPage() {
     <>
       <header className="cancha-header">
         <h1>⚽ Toma de Pedidos</h1>
-        <div className="reloj">{reloj}</div>
+        <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+          <Link href="/pedidos" className="btn btn-blanco">
+            📋 Pedidos
+          </Link>
+          <div className="reloj">{reloj}</div>
+        </div>
       </header>
 
       <div className="layout">

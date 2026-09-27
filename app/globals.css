@@ -230,6 +230,105 @@ html, body {
 }
 #toast.mostrar { opacity: 1; }
 
+/* ── Pedidos (tabla con filtros) ──────────────────────────────────── */
+.pedidos-page {
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.filtros-pedidos {
+  padding: 16px;
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+  align-items: flex-end;
+}
+
+.filtro-campo {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.filtro-campo label {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--verde-oscuro);
+}
+
+.filtro-campo select,
+.filtro-campo input {
+  padding: 10px 12px;
+  font-size: 0.95rem;
+  border-radius: 8px;
+  border: 2px solid #ddd;
+  min-width: 160px;
+}
+
+.pedidos-error {
+  color: #b30000;
+  font-weight: 700;
+  padding: 8px 16px;
+}
+
+.tabla-pedidos-wrap {
+  padding: 8px;
+  overflow-x: auto;
+}
+
+.tabla-pedidos {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.95rem;
+}
+
+.tabla-pedidos th {
+  text-align: left;
+  padding: 12px;
+  background: var(--verde-oscuro);
+  color: var(--blanco);
+  position: sticky;
+  top: 0;
+}
+
+.tabla-pedidos th:first-child { border-top-left-radius: 8px; }
+.tabla-pedidos th:last-child { border-top-right-radius: 8px; }
+
+.tabla-pedidos td {
+  padding: 12px;
+  border-bottom: 1px solid #eee;
+  vertical-align: top;
+}
+
+.tabla-pedidos tbody tr:hover { background: #f7f7f7; }
+
+.tabla-pedidos tfoot td {
+  font-weight: 800;
+  color: var(--verde-oscuro);
+  border-top: 2px solid var(--verde);
+  border-bottom: none;
+  text-align: right;
+}
+
+.col-monto { text-align: right; font-weight: 700; white-space: nowrap; }
+
+.estado-badge {
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--blanco);
+  white-space: nowrap;
+}
+.estado-pendiente { background: var(--naranja); }
+.estado-en_preparacion { background: #cc8a00; }
+.estado-listo { background: var(--verde); }
+.estado-entregado { background: #777; }
+.estado-cancelado { background: #c0392b; }
+
 /* ── Cocina (TV en vivo) ──────────────────────────────────────────── */
 .cocina-body { overflow: hidden; }
 .columnas {

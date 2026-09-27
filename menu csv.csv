@@ -1,0 +1,31 @@
+Item,Categoria,Precio,Activo
+Clasica del DT,Platos fuertes,"4,5",TRUE
+Jugada Maestra,Platos fuertes,"4,5",TRUE
+Defensa crujiente,Platos fuertes,"4,5",TRUE
+Sopa de gallina,Sopas,3,TRUE
+Gallina asada,Platos fuertes,5,TRUE
+Hatrick ,Platos fuertes,9,TRUE
+Parrillada campeona,Platos fuertes,7,TRUE
+Golazo del DT,Platos fuertes,"6,5",TRUE
+Alitas de la victoria,Platos fuertes,"4,5",TRUE
+Combo de alitas,Combos,6,TRUE
+Golazo de gallina,Sopas,7,TRUE
+Sopa mas gallina,Sopas,6,TRUE
+Chicharrones del DT,Combos,5,TRUE
+Picada DT JR,Combos,"12,99",TRUE
+Picada DT Campeona,Combos,"18,99",TRUE
+Papa pequena,Extra,2,TRUE
+Papa Grande,Extra,4,TRUE
+Soda Lata,Bebidas,"0,75",TRUE
+Soda 1.5,Bebidas,"1,5",TRUE
+Chunks,Combos,6,TRUE
+Aderezo,Extra,"0,5",TRUE
+Chorizo,Extra,"0,75",TRUE
+Chicharron,Extra,2,TRUE
+Casamiento ,Extra,"0,5",TRUE
+Tortillas ,Extra,"0,1",TRUE
+Costilla ,Extra,2,TRUE
+Carne,Extra,2,TRUE
+Gallina ,Extra,3,TRUE
+Chimol,Extra,"0,5",TRUE
+Alitas,Extra,2,TRUE

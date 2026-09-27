@@ -55,9 +55,16 @@ export const schema = buildSchema(`
     precioUnitario: Float!
   }
 
+  input MenuItemInput {
+    nombre: String!
+    categoria: String!
+    precio: Float!
+  }
+
   type Mutation {
     crearPedido(clienteNombre: String!, nota: String, items: [ItemInput!]!): Pedido!
     actualizarEstado(id: ID!, estado: EstadoPedido!): Pedido!
     agregarCliente(nombre: String!, telefono: String): Cliente!
+    agregarProductosMenu(items: [MenuItemInput!]!): [MenuItem!]!
   }
 `);
