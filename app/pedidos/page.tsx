@@ -26,6 +26,14 @@ const ORDEN_OPCIONES = [
 
 type Orden = (typeof ORDEN_OPCIONES)[number]['valor'];
 
+function fechaLocal(iso: string) {
+  const d = new Date(iso);
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const dia = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${dia}`;
+}
+
 function esRapido(nombre: string) {
   return nombre.startsWith('Rápido-');
 }
@@ -68,7 +76,7 @@ export default function PedidosPage() {
       if (filtroCliente === RAPIDOS && !esRapido(p.clienteNombre)) return false;
       if (filtroCliente !== TODOS && filtroCliente !== RAPIDOS && p.clienteNombre !== filtroCliente) return false;
       if (filtroEstado !== TODOS && p.estado !== filtroEstado) return false;
-      const fecha = p.createdAt.slice(0, 10);
+      const fecha = fechaLocal(p.createdAt);
       if (fechaDesde && fecha < fechaDesde) return false;
       if (fechaHasta && fecha > fechaHasta) return false;
       return true;
