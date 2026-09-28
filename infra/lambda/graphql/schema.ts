@@ -14,6 +14,7 @@ export const schema = buildSchema(`
     nombre: String!
     categoria: String!
     precio: Float!
+    activo: Boolean!
   }
 
   type Cliente {
@@ -44,6 +45,7 @@ export const schema = buildSchema(`
 
   type Query {
     menu: [MenuItem!]!
+    menuAdmin: [MenuItem!]!
     clientes: [Cliente!]!
     pedidos(soloActivos: Boolean): [Pedido!]!
   }
@@ -66,5 +68,14 @@ export const schema = buildSchema(`
     actualizarEstado(id: ID!, estado: EstadoPedido!): Pedido!
     agregarCliente(nombre: String!, telefono: String): Cliente!
     agregarProductosMenu(items: [MenuItemInput!]!): [MenuItem!]!
+    crearProductoMenu(nombre: String!, categoria: String!, precio: Float!): MenuItem!
+    actualizarProductoMenu(
+      id: ID!
+      nombre: String
+      categoria: String
+      precio: Float
+      activo: Boolean
+    ): MenuItem!
+    eliminarProductoMenu(id: ID!): Boolean!
   }
 `);

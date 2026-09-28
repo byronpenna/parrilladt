@@ -65,13 +65,23 @@ async function fetchPedido(pool: Pool, id: string) {
   return shapePedido(res.rows[0]);
 }
 
+function shapeMenuItem(r: { id: string; nombre: string; categoria: string; precio: string | number; activo: boolean }) {
+  return { id: r.id, nombre: r.nombre, categoria: r.categoria, precio: Number(r.precio), activo: r.activo };
+}
+
 export const rootValue = {
   menu: async () => {
     const pool = await getPool();
     const res = await pool.query(
-      'SELECT id, nombre, categoria, precio FROM menu_items WHERE activo = true ORDER BY categoria, nombre'
+      'SELECT id, nombre, categoria, precio, activo FROM menu_items WHERE activo = true ORDER BY categoria, nombre'
     );
-    return res.rows.map((r) => ({ id: r.id, nombre: r.nombre, categoria: r.categoria, precio: Number(r.precio) }));
+    return res.rows.map(shapeMenuItem);
+  },
+
+  menuAdmin: async () => {
+    const pool = await getPool();
+    const res = await pool.query('SELECT id, nombre, categoria, precio, activo FROM menu_items ORDER BY categoria, nombre');
+    return res.rows.map(shapeMenuItem);
   },
 
   clientes: async () => {
@@ -153,20 +163,79 @@ export const rootValue = {
     items: { nombre: string; categoria: string; precio: number }[];
   }) => {
     const pool = await getPool();
-    const insertados: { id: string; nombre: string; categoria: string; precio: number }[] = [];
+    const insertados: ReturnType<typeof shapeMenuItem>[] = [];
     for (const it of items) {
       const nombre = it.nombre.trim();
       if (!nombre) continue;
       const res = await pool.query(
         `INSERT INTO menu_items (nombre, categoria, precio) VALUES ($1, $2, $3)
          ON CONFLICT (nombre) DO NOTHING
-         RETURNING id, nombre, categoria, precio`,
+         RETURNING id, nombre, categoria, precio, activo`,
         [nombre, it.categoria.trim(), it.precio]
       );
       if (res.rowCount && res.rowCount > 0) {
-        insertados.push({ ...res.rows[0], precio: Number(res.rows[0].precio) });
+        insertados.push(shapeMenuItem(res.rows[0]));
       }
     }
     return insertados;
+  },
+
+  crearProductoMenu: async ({
+    nombre,
+    categoria,
+    precio,
+  }: {
+    nombre: string;
+    categoria: string;
+    precio: number;
+  }) => {
+    const pool = await getPool();
+    try {
+      const res = await pool.query(
+        `INSERT INTO menu_items (nombre, categoria, precio) VALUES ($1, $2, $3)
+         RETURNING id, nombre, categoria, precio, activo`,
+        [nombre.trim(), categoria.trim(), precio]
+      );
+      return shapeMenuItem(res.rows[0]);
+    } catch (err: unknown) {
+      if (err && typeof err === 'object' && 'code' in err && (err as { code: string }).code === '23505') {
+        throw new Error(`Ya existe un producto llamado "${nombre.trim()}"`);
+      }
+      throw err;
+    }
+  },
+
+  actualizarProductoMenu: async ({
+    id,
+    nombre,
+    categoria,
+    precio,
+    activo,
+  }: {
+    id: string;
+    nombre?: string;
+    categoria?: string;
+    precio?: number;
+    activo?: boolean;
+  }) => {
+    const pool = await getPool();
+    const res = await pool.query(
+      `UPDATE menu_items SET
+         nombre = COALESCE($2, nombre),
+         categoria = COALESCE($3, categoria),
+         precio = COALESCE($4, precio),
+         activo = COALESCE($5, activo)
+       WHERE id = $1
+       RETURNING id, nombre, categoria, precio, activo`,
+      [id, nombre?.trim() ?? null, categoria?.trim() ?? null, precio ?? null, activo ?? null]
+    );
+    if (res.rowCount === 0) throw new Error(`Producto ${id} no encontrado`);
+    return shapeMenuItem(res.rows[0]);
+  },
+
+  eliminarProductoMenu: async ({ id }: { id: string }) => {
+    const pool = await getPool();
+    const res = await pool.query('DELETE FROM menu_items WHERE id = $1', [id]);
+    return (res.rowCount ?? 0) > 0;
   },
 };

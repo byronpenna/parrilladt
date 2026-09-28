@@ -1,5 +1,9 @@
 export const QUERY_MENU = `
-  query { menu { id nombre categoria precio } }
+  query { menu { id nombre categoria precio activo } }
+`;
+
+export const QUERY_MENU_ADMIN = `
+  query { menuAdmin { id nombre categoria precio activo } }
 `;
 
 export const QUERY_CLIENTES = `
@@ -42,5 +46,27 @@ export const MUTATION_AGREGAR_CLIENTE = `
     agregarCliente(nombre: $nombre, telefono: $telefono) {
       id
     }
+  }
+`;
+
+export const MUTATION_CREAR_PRODUCTO = `
+  mutation CrearProducto($nombre: String!, $categoria: String!, $precio: Float!) {
+    crearProductoMenu(nombre: $nombre, categoria: $categoria, precio: $precio) {
+      id nombre categoria precio activo
+    }
+  }
+`;
+
+export const MUTATION_ACTUALIZAR_PRODUCTO = `
+  mutation ActualizarProducto($id: ID!, $nombre: String, $categoria: String, $precio: Float, $activo: Boolean) {
+    actualizarProductoMenu(id: $id, nombre: $nombre, categoria: $categoria, precio: $precio, activo: $activo) {
+      id nombre categoria precio activo
+    }
+  }
+`;
+
+export const MUTATION_ELIMINAR_PRODUCTO = `
+  mutation EliminarProducto($id: ID!) {
+    eliminarProductoMenu(id: $id)
   }
 `;

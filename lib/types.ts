@@ -5,6 +5,7 @@ export interface MenuItem {
   nombre: string;
   categoria: string;
   precio: number;
+  activo: boolean;
 }
 
 export interface Cliente {

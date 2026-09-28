@@ -100,6 +100,9 @@ export default function PedidosPage() {
           <Link href="/" className="btn btn-blanco">
             ⚽ Tomar pedidos
           </Link>
+          <Link href="/productos" className="btn btn-blanco">
+            🍔 Productos
+          </Link>
           <div className="reloj">{pedidosFiltrados.length} pedidos</div>
         </div>
       </header>
