@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
+import writeXlsxFile from 'write-excel-file';
 import { gqlRequest } from '@/lib/graphql-client';
 import { QUERY_PEDIDOS } from '@/lib/queries';
 import type { Pedido, EstadoPedido } from '@/lib/types';
@@ -100,6 +101,31 @@ export default function PedidosPage() {
 
   const totalMostrado = pedidosFiltrados.reduce((s, p) => s + p.total, 0);
 
+  async function exportarExcel() {
+    const schema = [
+      {
+        column: 'Fecha',
+        type: String,
+        width: 18,
+        value: (p: Pedido) => new Date(p.createdAt).toLocaleString('es', { dateStyle: 'short', timeStyle: 'short' }),
+      },
+      { column: 'Cliente', type: String, width: 22, value: (p: Pedido) => p.clienteNombre },
+      { column: 'Items', type: String, width: 45, value: (p: Pedido) => p.itemsTexto },
+      { column: 'Nota', type: String, width: 25, value: (p: Pedido) => p.nota || '' },
+      { column: 'Estado', type: String, width: 16, value: (p: Pedido) => ESTADO_LABEL[p.estado] },
+      { column: 'Total', type: Number, format: '0.00', width: 12, value: (p: Pedido) => p.total },
+    ];
+
+    const ahora = new Date();
+    const marca = ahora.toISOString().slice(0, 16).replace(/[-:T]/g, '');
+
+    await writeXlsxFile(pedidosFiltrados, {
+      schema,
+      fileName: `pedidos_${marca}.xlsx`,
+      sheet: 'Pedidos',
+    });
+  }
+
   return (
     <>
       <header className="cancha-header">
@@ -178,6 +204,14 @@ export default function PedidosPage() {
             }}
           >
             Limpiar filtros
+          </button>
+
+          <button
+            className="btn btn-verde"
+            disabled={pedidosFiltrados.length === 0}
+            onClick={exportarExcel}
+          >
+            📊 Exportar a Excel
           </button>
         </div>
 

@@ -12,7 +12,8 @@
     "@aws-sdk/client-lambda": "^3.600.0",
     "next": "^16.3.6",
     "react": "^19.0.0",
-    "react-dom": "^19.0.0"
+    "react-dom": "^19.0.0",
+    "write-excel-file": "^2.3.0"
   },
   "devDependencies": {
     "@types/node": "^20.14.0",
