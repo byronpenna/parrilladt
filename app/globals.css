@@ -206,6 +206,18 @@ html, body {
   width: 100%; min-height: 60px; border-radius: 10px; border: 2px solid #ddd;
   padding: 10px; font-size: 1rem; resize: vertical;
 }
+#riderSelect {
+  width: 100%; padding: 10px 12px; font-size: 1rem;
+  border-radius: 10px; border: 2px solid #ddd;
+}
+.delivery-box {
+  display: flex; flex-direction: column; gap: 6px;
+  background: #f7f7f7; border-radius: 10px; padding: 10px 12px;
+}
+.delivery-box label { font-size: 0.85rem; font-weight: 700; color: var(--verde-oscuro); }
+.delivery-box .stepper { justify-content: center; gap: 18px; }
+.delivery-box .stepper button:disabled { opacity: 0.4; cursor: not-allowed; }
+.subtotal-linea { font-size: 0.95rem; font-weight: 600; color: #666; text-align: right; }
 .total { font-size: 1.4rem; font-weight: 800; color: var(--verde-oscuro); text-align: right; }
 #pagaConInput {
   width: 100%; padding: 10px 12px; font-size: 1.1rem; font-weight: 700;

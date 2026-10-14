@@ -23,6 +23,13 @@ export const schema = buildSchema(`
     telefono: String
   }
 
+  type Rider {
+    id: ID!
+    nombre: String!
+    telefono: String
+    activo: Boolean!
+  }
+
   type PedidoItem {
     id: ID!
     itemNombre: String!
@@ -41,12 +48,17 @@ export const schema = buildSchema(`
     updatedAt: String!
     items: [PedidoItem!]!
     itemsTexto: String!
+    riderId: ID
+    riderNombre: String
+    costoDelivery: Float!
   }
 
   type Query {
     menu: [MenuItem!]!
     menuAdmin: [MenuItem!]!
     clientes: [Cliente!]!
+    riders: [Rider!]!
+    ridersAdmin: [Rider!]!
     pedidos(soloActivos: Boolean): [Pedido!]!
   }
 
@@ -64,7 +76,13 @@ export const schema = buildSchema(`
   }
 
   type Mutation {
-    crearPedido(clienteNombre: String!, nota: String, items: [ItemInput!]!): Pedido!
+    crearPedido(
+      clienteNombre: String!
+      nota: String
+      riderId: ID
+      costoDelivery: Float
+      items: [ItemInput!]!
+    ): Pedido!
     actualizarEstado(id: ID!, estado: EstadoPedido!): Pedido!
     agregarCliente(nombre: String!, telefono: String): Cliente!
     agregarProductosMenu(items: [MenuItemInput!]!): [MenuItem!]!
@@ -77,5 +95,8 @@ export const schema = buildSchema(`
       activo: Boolean
     ): MenuItem!
     eliminarProductoMenu(id: ID!): Boolean!
+    crearRider(nombre: String!, telefono: String): Rider!
+    actualizarRider(id: ID!, nombre: String, telefono: String, activo: Boolean): Rider!
+    eliminarRider(id: ID!): Boolean!
   }
 `);

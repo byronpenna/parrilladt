@@ -14,6 +14,13 @@ export interface Cliente {
   telefono: string | null;
 }
 
+export interface Rider {
+  id: string;
+  nombre: string;
+  telefono: string | null;
+  activo: boolean;
+}
+
 export interface PedidoItem {
   id: string;
   itemNombre: string;
@@ -32,4 +39,7 @@ export interface Pedido {
   updatedAt: string;
   items: PedidoItem[];
   itemsTexto: string;
+  riderId: string | null;
+  riderNombre: string | null;
+  costoDelivery: number;
 }

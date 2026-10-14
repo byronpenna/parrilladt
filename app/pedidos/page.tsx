@@ -113,6 +113,8 @@ export default function PedidosPage() {
       { column: 'Items', type: String, width: 45, value: (p: Pedido) => p.itemsTexto },
       { column: 'Nota', type: String, width: 25, value: (p: Pedido) => p.nota || '' },
       { column: 'Estado', type: String, width: 16, value: (p: Pedido) => ESTADO_LABEL[p.estado] },
+      { column: 'Rider', type: String, width: 18, value: (p: Pedido) => p.riderNombre || '' },
+      { column: 'Delivery', type: Number, format: '0.00', width: 12, value: (p: Pedido) => p.costoDelivery },
       { column: 'Total', type: Number, format: '0.00', width: 12, value: (p: Pedido) => p.total },
     ];
 
@@ -136,6 +138,9 @@ export default function PedidosPage() {
           </Link>
           <Link href="/productos" className="btn btn-blanco">
             🍔 Productos
+          </Link>
+          <Link href="/riders" className="btn btn-blanco">
+            🛵 Riders
           </Link>
           <div className="reloj">{pedidosFiltrados.length} pedidos</div>
         </div>
@@ -231,6 +236,8 @@ export default function PedidosPage() {
                   <th>Items</th>
                   <th>Nota</th>
                   <th>Estado</th>
+                  <th>Rider</th>
+                  <th>Delivery</th>
                   <th>Total</th>
                 </tr>
               </thead>
@@ -244,13 +251,15 @@ export default function PedidosPage() {
                     <td>
                       <span className={`estado-badge estado-${p.estado}`}>{ESTADO_LABEL[p.estado]}</span>
                     </td>
+                    <td>{p.riderNombre || '—'}</td>
+                    <td className="col-monto">{p.riderNombre ? `$${p.costoDelivery.toFixed(2)}` : '—'}</td>
                     <td className="col-monto">${p.total.toFixed(2)}</td>
                   </tr>
                 ))}
               </tbody>
               <tfoot>
                 <tr>
-                  <td colSpan={5}>Total mostrado</td>
+                  <td colSpan={6}>Total mostrado</td>
                   <td className="col-monto">${totalMostrado.toFixed(2)}</td>
                 </tr>
               </tfoot>

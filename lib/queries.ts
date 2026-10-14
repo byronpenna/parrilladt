@@ -10,6 +10,14 @@ export const QUERY_CLIENTES = `
   query { clientes { id nombre telefono } }
 `;
 
+export const QUERY_RIDERS = `
+  query { riders { id nombre telefono activo } }
+`;
+
+export const QUERY_RIDERS_ADMIN = `
+  query { ridersAdmin { id nombre telefono activo } }
+`;
+
 export const QUERY_PEDIDOS = `
   query Pedidos($soloActivos: Boolean) {
     pedidos(soloActivos: $soloActivos) {
@@ -20,13 +28,27 @@ export const QUERY_PEDIDOS = `
       total
       createdAt
       itemsTexto
+      riderNombre
+      costoDelivery
     }
   }
 `;
 
 export const MUTATION_CREAR_PEDIDO = `
-  mutation CrearPedido($clienteNombre: String!, $nota: String, $items: [ItemInput!]!) {
-    crearPedido(clienteNombre: $clienteNombre, nota: $nota, items: $items) {
+  mutation CrearPedido(
+    $clienteNombre: String!
+    $nota: String
+    $riderId: ID
+    $costoDelivery: Float
+    $items: [ItemInput!]!
+  ) {
+    crearPedido(
+      clienteNombre: $clienteNombre
+      nota: $nota
+      riderId: $riderId
+      costoDelivery: $costoDelivery
+      items: $items
+    ) {
       id
     }
   }
@@ -68,5 +90,27 @@ export const MUTATION_ACTUALIZAR_PRODUCTO = `
 export const MUTATION_ELIMINAR_PRODUCTO = `
   mutation EliminarProducto($id: ID!) {
     eliminarProductoMenu(id: $id)
+  }
+`;
+
+export const MUTATION_CREAR_RIDER = `
+  mutation CrearRider($nombre: String!, $telefono: String) {
+    crearRider(nombre: $nombre, telefono: $telefono) {
+      id nombre telefono activo
+    }
+  }
+`;
+
+export const MUTATION_ACTUALIZAR_RIDER = `
+  mutation ActualizarRider($id: ID!, $nombre: String, $telefono: String, $activo: Boolean) {
+    actualizarRider(id: $id, nombre: $nombre, telefono: $telefono, activo: $activo) {
+      id nombre telefono activo
+    }
+  }
+`;
+
+export const MUTATION_ELIMINAR_RIDER = `
+  mutation EliminarRider($id: ID!) {
+    eliminarRider(id: $id)
   }
 `;

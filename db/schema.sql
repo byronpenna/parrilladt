@@ -16,6 +16,19 @@ CREATE TABLE IF NOT EXISTS clientes (
 -- evita duplicados por mayúsculas/espacios, igual que agregarCliente_ hoy
 CREATE UNIQUE INDEX IF NOT EXISTS clientes_nombre_unique ON clientes (lower(trim(nombre)));
 
+-- ── Riders ──────────────────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS riders (
+    id          BIGSERIAL PRIMARY KEY,
+    nombre      TEXT NOT NULL,
+    telefono    TEXT,
+    activo      BOOLEAN NOT NULL DEFAULT true,
+    created_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at  TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS riders_nombre_unique ON riders (lower(trim(nombre)));
+CREATE INDEX IF NOT EXISTS riders_activo_idx ON riders (activo);
+
 -- ── Menú ────────────────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS menu_items (
     id          BIGSERIAL PRIMARY KEY,
@@ -49,8 +62,14 @@ CREATE TABLE IF NOT EXISTS pedidos (
     updated_at      TIMESTAMPTZ NOT NULL DEFAULT now()    -- reemplaza "Actualizado"
 );
 
+-- agregadas para el delivery con rider; ADD COLUMN IF NOT EXISTS porque
+-- CREATE TABLE IF NOT EXISTS no altera una tabla pedidos ya existente
+ALTER TABLE pedidos ADD COLUMN IF NOT EXISTS rider_id BIGINT REFERENCES riders(id) ON DELETE SET NULL;
+ALTER TABLE pedidos ADD COLUMN IF NOT EXISTS costo_delivery NUMERIC(10,2) NOT NULL DEFAULT 0 CHECK (costo_delivery >= 0);
+
 CREATE INDEX IF NOT EXISTS pedidos_estado_idx ON pedidos (estado) WHERE estado <> 'entregado';
 CREATE INDEX IF NOT EXISTS pedidos_created_at_idx ON pedidos (created_at);
+CREATE INDEX IF NOT EXISTS pedidos_rider_id_idx ON pedidos (rider_id);
 
 -- ── Items de cada pedido ────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS pedido_items (
@@ -82,11 +101,16 @@ CREATE OR REPLACE TRIGGER menu_items_set_updated_at
     BEFORE UPDATE ON menu_items
     FOR EACH ROW EXECUTE FUNCTION set_updated_at();
 
+CREATE OR REPLACE TRIGGER riders_set_updated_at
+    BEFORE UPDATE ON riders
+    FOR EACH ROW EXECUTE FUNCTION set_updated_at();
+
 CREATE OR REPLACE FUNCTION recalcular_total_pedido()
 RETURNS TRIGGER AS $$
 BEGIN
     UPDATE pedidos
     SET total = COALESCE((SELECT SUM(subtotal) FROM pedido_items WHERE pedido_id = COALESCE(NEW.pedido_id, OLD.pedido_id)), 0)
+                 + COALESCE((SELECT costo_delivery FROM pedidos WHERE id = COALESCE(NEW.pedido_id, OLD.pedido_id)), 0)
     WHERE id = COALESCE(NEW.pedido_id, OLD.pedido_id);
     RETURN NULL;
 END;

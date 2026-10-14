@@ -3,12 +3,16 @@
 import Link from 'next/link';
 import { useEffect, useRef, useState } from 'react';
 import { gqlRequest } from '@/lib/graphql-client';
-import { QUERY_MENU, QUERY_CLIENTES, MUTATION_CREAR_PEDIDO, MUTATION_AGREGAR_CLIENTE } from '@/lib/queries';
-import type { MenuItem, Cliente } from '@/lib/types';
+import { QUERY_MENU, QUERY_CLIENTES, QUERY_RIDERS, MUTATION_CREAR_PEDIDO, MUTATION_AGREGAR_CLIENTE } from '@/lib/queries';
+import type { MenuItem, Cliente, Rider } from '@/lib/types';
 
 const CLAVE_MENU = 'cancha_menu_cache';
 const CLAVE_CLIENTES = 'cancha_clientes_cache';
+const CLAVE_RIDERS = 'cancha_riders_cache';
 const CLAVE_PENDIENTES = 'cancha_pedidos_pendientes';
+
+const COSTO_DELIVERY_MIN = 1;
+const COSTO_DELIVERY_PASO = 0.5;
 
 interface ItemCarrito {
   nombre: string;
@@ -22,6 +26,8 @@ interface PedidoPendiente {
   clienteNombre: string;
   telefono: string;
   nota: string;
+  riderId: string | null;
+  costoDelivery: number;
   items: { menuItemId: string; nombre: string; cantidad: number; precioUnitario: number }[];
 }
 
@@ -34,11 +40,14 @@ export default function TabletPage() {
   const [reloj, setReloj] = useState('--:--');
   const [menu, setMenu] = useState<MenuItem[]>([]);
   const [clientes, setClientes] = useState<Cliente[]>([]);
+  const [riders, setRiders] = useState<Rider[]>([]);
   const [categoriaActiva, setCategoriaActiva] = useState('Todos');
   const [carrito, setCarrito] = useState<Map<string, ItemCarrito>>(new Map());
   const [clienteInput, setClienteInput] = useState('');
   const [telefono, setTelefono] = useState('');
   const [nota, setNota] = useState('');
+  const [riderId, setRiderId] = useState('');
+  const [costoDelivery, setCostoDelivery] = useState(COSTO_DELIVERY_MIN);
   const [pagaCon, setPagaCon] = useState('');
   const [enviando, setEnviando] = useState(false);
   const [syncStatus, setSyncStatus] = useState<{ texto: string; tipo: '' | 'ok' | 'error' }>({
@@ -58,6 +67,7 @@ export default function TabletPage() {
   useEffect(() => {
     cargarMenu();
     cargarClientes();
+    cargarRiders();
     const id = setInterval(reintentarPendientes, 15000);
     return () => clearInterval(id);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -89,6 +99,30 @@ export default function TabletPage() {
       const cache = localStorage.getItem(CLAVE_CLIENTES);
       if (cache) setClientes(JSON.parse(cache));
     }
+  }
+
+  async function cargarRiders() {
+    try {
+      const data = await gqlRequest<{ riders: Rider[] }>(QUERY_RIDERS);
+      setRiders(data.riders);
+      localStorage.setItem(CLAVE_RIDERS, JSON.stringify(data.riders));
+    } catch {
+      const cache = localStorage.getItem(CLAVE_RIDERS);
+      if (cache) setRiders(JSON.parse(cache));
+    }
+  }
+
+  function cambiarRider(valor: string) {
+    setRiderId(valor);
+    if (!valor) setCostoDelivery(COSTO_DELIVERY_MIN);
+  }
+
+  function subirCostoDelivery() {
+    setCostoDelivery((c) => c + COSTO_DELIVERY_PASO);
+  }
+
+  function bajarCostoDelivery() {
+    setCostoDelivery((c) => Math.max(COSTO_DELIVERY_MIN, c - COSTO_DELIVERY_PASO));
   }
 
   function cambiarCantidad(item: MenuItem, delta: number) {
@@ -165,7 +199,14 @@ export default function TabletPage() {
       cantidad: it.cantidad,
       precioUnitario: it.precio,
     }));
-    const payload: PedidoPendiente = { clienteNombre: cliente, telefono: tel, nota: nota.trim(), items };
+    const payload: PedidoPendiente = {
+      clienteNombre: cliente,
+      telefono: tel,
+      nota: nota.trim(),
+      riderId: riderId || null,
+      costoDelivery: riderId ? costoDelivery : 0,
+      items,
+    };
 
     setEnviando(true);
     setSyncStatus({ texto: 'Enviando...', tipo: '' });
@@ -185,6 +226,8 @@ export default function TabletPage() {
       setClienteInput('');
       setTelefono('');
       setNota('');
+      setRiderId('');
+      setCostoDelivery(COSTO_DELIVERY_MIN);
       setPagaCon('');
     } catch {
       guardarPendiente(payload);
@@ -194,6 +237,8 @@ export default function TabletPage() {
       setClienteInput('');
       setTelefono('');
       setNota('');
+      setRiderId('');
+      setCostoDelivery(COSTO_DELIVERY_MIN);
       setPagaCon('');
     } finally {
       setEnviando(false);
@@ -201,7 +246,8 @@ export default function TabletPage() {
   }
 
   const categorias = ['Todos', ...new Set(menu.map((m) => m.categoria || 'Otros'))];
-  const total = [...carrito.values()].reduce((s, it) => s + it.cantidad * it.precio, 0);
+  const subtotalItems = [...carrito.values()].reduce((s, it) => s + it.cantidad * it.precio, 0);
+  const total = subtotalItems + (riderId ? costoDelivery : 0);
   const pagaConNum = parseFloat(pagaCon);
   const tieneMontoPago = pagaCon.trim() !== '' && !Number.isNaN(pagaConNum);
   const vuelto = tieneMontoPago ? pagaConNum - total : 0;
@@ -315,6 +361,29 @@ export default function TabletPage() {
             value={nota}
             onChange={(e) => setNota(e.target.value)}
           />
+          <select id="riderSelect" value={riderId} onChange={(e) => cambiarRider(e.target.value)}>
+            <option value="">Sin rider (retiro en local)</option>
+            {riders.map((r) => (
+              <option key={r.id} value={r.id}>
+                {r.nombre}
+              </option>
+            ))}
+          </select>
+          {riderId && (
+            <div className="delivery-box">
+              <label>Costo de delivery</label>
+              <div className="stepper">
+                <button className="menos" onClick={bajarCostoDelivery} disabled={costoDelivery <= COSTO_DELIVERY_MIN}>
+                  −
+                </button>
+                <span className="cant">${costoDelivery.toFixed(2)}</span>
+                <button className="mas" onClick={subirCostoDelivery}>
+                  +
+                </button>
+              </div>
+            </div>
+          )}
+          {riderId && <div className="subtotal-linea">Subtotal: ${subtotalItems.toFixed(2)}</div>}
           <div className="total">Total: ${total.toFixed(2)}</div>
           <input
             id="pagaConInput"

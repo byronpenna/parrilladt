@@ -165,6 +165,9 @@ export default function ProductosPage() {
           <Link href="/pedidos" className="btn btn-blanco">
             📋 Pedidos
           </Link>
+          <Link href="/riders" className="btn btn-blanco">
+            🛵 Riders
+          </Link>
           <div className="reloj">{productosFiltrados.length} productos</div>
         </div>
       </header>
