@@ -9,6 +9,11 @@ export const schema = buildSchema(`
     cancelado
   }
 
+  enum MetodoPago {
+    efectivo
+    transferencia
+  }
+
   type MenuItem {
     id: ID!
     nombre: String!
@@ -51,6 +56,7 @@ export const schema = buildSchema(`
     riderId: ID
     riderNombre: String
     costoDelivery: Float!
+    metodoPago: MetodoPago!
   }
 
   type Query {
@@ -81,6 +87,7 @@ export const schema = buildSchema(`
       nota: String
       riderId: ID
       costoDelivery: Float
+      metodoPago: MetodoPago
       items: [ItemInput!]!
     ): Pedido!
     actualizarEstado(id: ID!, estado: EstadoPedido!): Pedido!

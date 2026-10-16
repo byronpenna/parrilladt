@@ -156,7 +156,7 @@
    "Properties": {
     "Code": {
      "S3Bucket": "cdk-hnb659fds-assets-861418247819-us-east-1",
-     "S3Key": "bcf42a0bbd3d4b365e9caef9b063dbd3cbffe3606ccca8436ade2ecb005098f7.zip"
+     "S3Key": "0edf9c8615c6fa5ffec88f0d37124478a0d063b7b23928a5f77b74ab3a97cc0d.zip"
     },
     "Environment": {
      "Variables": {
@@ -202,7 +202,7 @@
    ],
    "Metadata": {
     "aws:cdk:path": "PedidosCanchaStack/MigrateFn/Resource",
-    "aws:asset:path": "asset.bcf42a0bbd3d4b365e9caef9b063dbd3cbffe3606ccca8436ade2ecb005098f7",
+    "aws:asset:path": "asset.0edf9c8615c6fa5ffec88f0d37124478a0d063b7b23928a5f77b74ab3a97cc0d",
     "aws:asset:is-bundled": true,
     "aws:asset:property": "Code"
    }
@@ -287,7 +287,7 @@
    "Properties": {
     "Code": {
      "S3Bucket": "cdk-hnb659fds-assets-861418247819-us-east-1",
-     "S3Key": "36b67919965342bd9ce08e88065231ef9c8b9bcadb0b49c65fe3d16d414279ef.zip"
+     "S3Key": "259cdb60864b6657e64295b0bff3fd8b0613d354f1f971bc304e2a09fe9b7ee7.zip"
     },
     "Environment": {
      "Variables": {
@@ -332,7 +332,7 @@
    ],
    "Metadata": {
     "aws:cdk:path": "PedidosCanchaStack/GraphqlFn/Resource",
-    "aws:asset:path": "asset.36b67919965342bd9ce08e88065231ef9c8b9bcadb0b49c65fe3d16d414279ef",
+    "aws:asset:path": "asset.259cdb60864b6657e64295b0bff3fd8b0613d354f1f971bc304e2a09fe9b7ee7",
     "aws:asset:is-bundled": true,
     "aws:asset:property": "Code"
    }
@@ -527,9 +527,7 @@
     "IamInstanceProfile": {
      "Ref": "VpnBastionInstanceProfile7DDDC97C"
     },
-    "ImageId": {
-     "Ref": "SsmParameterValueawsserviceamiamazonlinuxlatestal2023amikernel61x8664C96584B6F00A464EAD1953AFF4B05118Parameter"
-    },
+    "ImageId": "ami-07166c0790dd2e747",
     "InstanceType": "t3.micro",
     "SecurityGroupIds": [
      {
@@ -561,7 +559,7 @@
   "CDKMetadata": {
    "Type": "AWS::CDK::Metadata",
    "Properties": {
-    "Analytics": "v2:deflate64:H4sIAAAAAAAA/11Oy27DMAz7lt4dLUsP23UtsKKXLUg+IFAdJXAedmHJK4og/z7YazBsJ1ISRbKA4iWHfIc3znQ7ZpO5wFIL6lFVxC54TQpv3CykC1iOna1JB2/kfvIuXM+298Ss/izVf5U6Wxa0muJl46ti0p6EZ7TYk4elTvPj25OsasL50mJjXUsDw0eC92C1GGeVwRmWyk3JNWHpJqPvcfxlW1zpXWemmLpvkJmE4S2C4j0cgh5JDsj0SIRjZ7ecVSVdLdgb20fLzyDXkHqW6HEmIb+q2BEGfvoqCnh+hXw3sDGZD1bMTFD94DcLC4G7bQEAAA=="
+    "Analytics": "v2:deflate64:H4sIAAAAAAAA/11Oy07DQAz8lt5dE9IDXGklql6gSj4gcjdOtHnsVmsvVRXl39GGRghOM2OPZ5xj/pJhtqGbbE3dbwd7walUMj0ULD4Gw0A3qSY2OU6HxpVsYrB6PwYfryfXBhaBP0P474KTEyVnOG1WPoOwCawykqOWA07loh/XgXWGgcZLTZXzNXeCHwu8R2fUegeWRpwKPyypC579YM09yV+21p2Db+yQWncVibAKviUA2eE+mp51T8KPRjw0bu2ZYfGVSq11bYr8jHqNOkN6Czt5+spzfH7FbNOJtdsQndqRsfjBb3A5FjFgAQAA"
    },
    "Metadata": {
     "aws:cdk:path": "PedidosCanchaStack/CDKMetadata/Default"
@@ -623,10 +621,6 @@
   }
  },
  "Parameters": {
-  "SsmParameterValueawsserviceamiamazonlinuxlatestal2023amikernel61x8664C96584B6F00A464EAD1953AFF4B05118Parameter": {
-   "Type": "AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>",
-   "Default": "/aws/service/ami-amazon-linux-latest/al2023-ami-kernel-6.1-x86_64"
-  },
   "BootstrapVersion": {
    "Type": "AWS::SSM::Parameter::Value<String>",
    "Default": "/cdk-bootstrap/hnb659fds/version",

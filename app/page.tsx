@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { useEffect, useRef, useState } from 'react';
 import { gqlRequest } from '@/lib/graphql-client';
 import { QUERY_MENU, QUERY_CLIENTES, QUERY_RIDERS, MUTATION_CREAR_PEDIDO, MUTATION_AGREGAR_CLIENTE } from '@/lib/queries';
-import type { MenuItem, Cliente, Rider } from '@/lib/types';
+import type { MenuItem, Cliente, Rider, MetodoPago } from '@/lib/types';
 
 const CLAVE_MENU = 'cancha_menu_cache';
 const CLAVE_CLIENTES = 'cancha_clientes_cache';
@@ -28,6 +28,7 @@ interface PedidoPendiente {
   nota: string;
   riderId: string | null;
   costoDelivery: number;
+  metodoPago: MetodoPago;
   items: { menuItemId: string; nombre: string; cantidad: number; precioUnitario: number }[];
 }
 
@@ -48,6 +49,7 @@ export default function TabletPage() {
   const [nota, setNota] = useState('');
   const [riderId, setRiderId] = useState('');
   const [costoDelivery, setCostoDelivery] = useState(COSTO_DELIVERY_MIN);
+  const [metodoPago, setMetodoPago] = useState<MetodoPago>('efectivo');
   const [pagaCon, setPagaCon] = useState('');
   const [enviando, setEnviando] = useState(false);
   const [syncStatus, setSyncStatus] = useState<{ texto: string; tipo: '' | 'ok' | 'error' }>({
@@ -205,6 +207,7 @@ export default function TabletPage() {
       nota: nota.trim(),
       riderId: riderId || null,
       costoDelivery: riderId ? costoDelivery : 0,
+      metodoPago,
       items,
     };
 
@@ -228,6 +231,7 @@ export default function TabletPage() {
       setNota('');
       setRiderId('');
       setCostoDelivery(COSTO_DELIVERY_MIN);
+      setMetodoPago('efectivo');
       setPagaCon('');
     } catch {
       guardarPendiente(payload);
@@ -239,6 +243,7 @@ export default function TabletPage() {
       setNota('');
       setRiderId('');
       setCostoDelivery(COSTO_DELIVERY_MIN);
+      setMetodoPago('efectivo');
       setPagaCon('');
     } finally {
       setEnviando(false);
@@ -385,20 +390,40 @@ export default function TabletPage() {
           )}
           {riderId && <div className="subtotal-linea">Subtotal: ${subtotalItems.toFixed(2)}</div>}
           <div className="total">Total: ${total.toFixed(2)}</div>
-          <input
-            id="pagaConInput"
-            type="number"
-            inputMode="decimal"
-            min="0"
-            step="0.01"
-            placeholder="¿Con cuánto paga?"
-            value={pagaCon}
-            onChange={(e) => setPagaCon(e.target.value)}
-          />
-          {tieneMontoPago && (
-            <div className={`vuelto ${vuelto < 0 ? 'falta' : ''}`}>
-              {vuelto < 0 ? `Falta: $${Math.abs(vuelto).toFixed(2)}` : `Vuelto: $${vuelto.toFixed(2)}`}
-            </div>
+          <div className="metodo-pago-toggle">
+            <button
+              type="button"
+              className={`categoria-btn ${metodoPago === 'efectivo' ? 'activa' : ''}`}
+              onClick={() => setMetodoPago('efectivo')}
+            >
+              💵 Efectivo
+            </button>
+            <button
+              type="button"
+              className={`categoria-btn ${metodoPago === 'transferencia' ? 'activa' : ''}`}
+              onClick={() => setMetodoPago('transferencia')}
+            >
+              🏦 Transferencia
+            </button>
+          </div>
+          {metodoPago === 'efectivo' && (
+            <>
+              <input
+                id="pagaConInput"
+                type="number"
+                inputMode="decimal"
+                min="0"
+                step="0.01"
+                placeholder="¿Con cuánto paga?"
+                value={pagaCon}
+                onChange={(e) => setPagaCon(e.target.value)}
+              />
+              {tieneMontoPago && (
+                <div className={`vuelto ${vuelto < 0 ? 'falta' : ''}`}>
+                  {vuelto < 0 ? `Falta: $${Math.abs(vuelto).toFixed(2)}` : `Vuelto: $${vuelto.toFixed(2)}`}
+                </div>
+              )}
+            </>
           )}
           <button className="btn btn-naranja" id="btnEnviar" disabled={enviando} onClick={enviarPedido}>
             Enviar a cocina

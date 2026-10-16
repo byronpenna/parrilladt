@@ -28,7 +28,7 @@
               },
               "stackTraces": [
                 "...new NodejsFunction in aws-cdk-lib...",
-                "new PedidosCanchaStack (/Users/byron/Downloads/pedidos-cancha/infra/lib/pedidos-cancha-stack.ts:78:23)",
+                "new PedidosCanchaStack (/Users/byron/Downloads/pedidos-cancha/infra/lib/pedidos-cancha-stack.ts:82:23)",
                 "<anonymous> (/Users/byron/Downloads/pedidos-cancha/infra/bin/pedidos-cancha.ts:8:1)",
                 "...node internals, ts-node, ts-node..."
               ]
@@ -46,7 +46,35 @@
               },
               "stackTraces": [
                 "...new NodejsFunction in aws-cdk-lib...",
-                "new PedidosCanchaStack (/Users/byron/Downloads/pedidos-cancha/infra/lib/pedidos-cancha-stack.ts:115:23)",
+                "new PedidosCanchaStack (/Users/byron/Downloads/pedidos-cancha/infra/lib/pedidos-cancha-stack.ts:119:23)",
+                "<anonymous> (/Users/byron/Downloads/pedidos-cancha/infra/bin/pedidos-cancha.ts:8:1)",
+                "...node internals, ts-node, ts-node..."
+              ]
+            }
+          ]
+        },
+        {
+          "ruleName": "W9010",
+          "description": "ImageId: Hardcoded AMI ID - use a parameter or mapping for portability",
+          "severity": "warning",
+          "ruleMetadata": {
+            "category": "Security"
+          },
+          "violatingConstructs": [
+            {
+              "constructPath": "PedidosCanchaStack/VpnBastion/Resource",
+              "constructFqn": "aws-cdk-lib.aws_ec2.CfnInstance",
+              "libraryVersion": "2.270.0",
+              "cloudFormationResource": {
+                "templatePath": "PedidosCanchaStack.template.json",
+                "logicalId": "VpnBastion4C0CF55F",
+                "propertyPaths": [
+                  "Properties.ImageId"
+                ]
+              },
+              "stackTraces": [
+                "...new Instance2 in aws-cdk-lib...",
+                "new PedidosCanchaStack (/Users/byron/Downloads/pedidos-cancha/infra/lib/pedidos-cancha-stack.ts:181:25)",
                 "<anonymous> (/Users/byron/Downloads/pedidos-cancha/infra/bin/pedidos-cancha.ts:8:1)",
                 "...node internals, ts-node, ts-node..."
               ]

@@ -30,6 +30,7 @@ export const QUERY_PEDIDOS = `
       itemsTexto
       riderNombre
       costoDelivery
+      metodoPago
     }
   }
 `;
@@ -40,6 +41,7 @@ export const MUTATION_CREAR_PEDIDO = `
     $nota: String
     $riderId: ID
     $costoDelivery: Float
+    $metodoPago: MetodoPago
     $items: [ItemInput!]!
   ) {
     crearPedido(
@@ -47,6 +49,7 @@ export const MUTATION_CREAR_PEDIDO = `
       nota: $nota
       riderId: $riderId
       costoDelivery: $costoDelivery
+      metodoPago: $metodoPago
       items: $items
     ) {
       id

@@ -5,7 +5,7 @@ import { useEffect, useMemo, useState } from 'react';
 import writeXlsxFile from 'write-excel-file';
 import { gqlRequest } from '@/lib/graphql-client';
 import { QUERY_PEDIDOS } from '@/lib/queries';
-import type { Pedido, EstadoPedido } from '@/lib/types';
+import type { Pedido, EstadoPedido, MetodoPago } from '@/lib/types';
 
 const RAPIDOS = 'rapidos';
 const TODOS = 'todos';
@@ -16,6 +16,11 @@ const ESTADO_LABEL: Record<EstadoPedido, string> = {
   listo: 'Listo',
   entregado: 'Entregado',
   cancelado: 'Cancelado',
+};
+
+const METODO_PAGO_LABEL: Record<MetodoPago, string> = {
+  efectivo: 'Efectivo',
+  transferencia: 'Transferencia',
 };
 
 const ORDEN_OPCIONES = [
@@ -46,6 +51,7 @@ export default function PedidosPage() {
 
   const [filtroCliente, setFiltroCliente] = useState<string>(TODOS);
   const [filtroEstado, setFiltroEstado] = useState<EstadoPedido | typeof TODOS>(TODOS);
+  const [filtroMetodoPago, setFiltroMetodoPago] = useState<MetodoPago | typeof TODOS>(TODOS);
   const [fechaDesde, setFechaDesde] = useState('');
   const [fechaHasta, setFechaHasta] = useState('');
   const [orden, setOrden] = useState<Orden>('fecha_desc');
@@ -77,6 +83,7 @@ export default function PedidosPage() {
       if (filtroCliente === RAPIDOS && !esRapido(p.clienteNombre)) return false;
       if (filtroCliente !== TODOS && filtroCliente !== RAPIDOS && p.clienteNombre !== filtroCliente) return false;
       if (filtroEstado !== TODOS && p.estado !== filtroEstado) return false;
+      if (filtroMetodoPago !== TODOS && p.metodoPago !== filtroMetodoPago) return false;
       const fecha = fechaLocal(p.createdAt);
       if (fechaDesde && fecha < fechaDesde) return false;
       if (fechaHasta && fecha > fechaHasta) return false;
@@ -97,7 +104,7 @@ export default function PedidosPage() {
     });
 
     return resultado;
-  }, [pedidos, filtroCliente, filtroEstado, fechaDesde, fechaHasta, orden]);
+  }, [pedidos, filtroCliente, filtroEstado, filtroMetodoPago, fechaDesde, fechaHasta, orden]);
 
   const totalMostrado = pedidosFiltrados.reduce((s, p) => s + p.total, 0);
 
@@ -115,6 +122,7 @@ export default function PedidosPage() {
       { column: 'Estado', type: String, width: 16, value: (p: Pedido) => ESTADO_LABEL[p.estado] },
       { column: 'Rider', type: String, width: 18, value: (p: Pedido) => p.riderNombre || '' },
       { column: 'Delivery', type: Number, format: '0.00', width: 12, value: (p: Pedido) => p.costoDelivery },
+      { column: 'Pago', type: String, width: 14, value: (p: Pedido) => METODO_PAGO_LABEL[p.metodoPago] },
       { column: 'Total', type: Number, format: '0.00', width: 12, value: (p: Pedido) => p.total },
     ];
 
@@ -178,6 +186,22 @@ export default function PedidosPage() {
           </div>
 
           <div className="filtro-campo">
+            <label htmlFor="filtroMetodoPago">Pago</label>
+            <select
+              id="filtroMetodoPago"
+              value={filtroMetodoPago}
+              onChange={(e) => setFiltroMetodoPago(e.target.value as MetodoPago | typeof TODOS)}
+            >
+              <option value={TODOS}>Todos</option>
+              {(Object.keys(METODO_PAGO_LABEL) as MetodoPago[]).map((m) => (
+                <option key={m} value={m}>
+                  {METODO_PAGO_LABEL[m]}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="filtro-campo">
             <label htmlFor="fechaDesde">Desde</label>
             <input id="fechaDesde" type="date" value={fechaDesde} onChange={(e) => setFechaDesde(e.target.value)} />
           </div>
@@ -203,6 +227,7 @@ export default function PedidosPage() {
             onClick={() => {
               setFiltroCliente(TODOS);
               setFiltroEstado(TODOS);
+              setFiltroMetodoPago(TODOS);
               setFechaDesde('');
               setFechaHasta('');
               setOrden('fecha_desc');
@@ -238,6 +263,7 @@ export default function PedidosPage() {
                   <th>Estado</th>
                   <th>Rider</th>
                   <th>Delivery</th>
+                  <th>Pago</th>
                   <th>Total</th>
                 </tr>
               </thead>
@@ -253,13 +279,14 @@ export default function PedidosPage() {
                     </td>
                     <td>{p.riderNombre || '—'}</td>
                     <td className="col-monto">{p.riderNombre ? `$${p.costoDelivery.toFixed(2)}` : '—'}</td>
+                    <td>{METODO_PAGO_LABEL[p.metodoPago]}</td>
                     <td className="col-monto">${p.total.toFixed(2)}</td>
                   </tr>
                 ))}
               </tbody>
               <tfoot>
                 <tr>
-                  <td colSpan={6}>Total mostrado</td>
+                  <td colSpan={7}>Total mostrado</td>
                   <td className="col-monto">${totalMostrado.toFixed(2)}</td>
                 </tr>
               </tfoot>

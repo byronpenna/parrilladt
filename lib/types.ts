@@ -1,4 +1,5 @@
 export type EstadoPedido = 'pendiente' | 'en_preparacion' | 'listo' | 'entregado' | 'cancelado';
+export type MetodoPago = 'efectivo' | 'transferencia';
 
 export interface MenuItem {
   id: string;
@@ -42,4 +43,5 @@ export interface Pedido {
   riderId: string | null;
   riderNombre: string | null;
   costoDelivery: number;
+  metodoPago: MetodoPago;
 }

@@ -21,6 +21,7 @@ interface PedidoRow {
   rider_id: string | null;
   rider_nombre: string | null;
   costo_delivery: string;
+  metodo_pago: string;
 }
 
 function shapePedido(row: PedidoRow) {
@@ -44,12 +45,13 @@ function shapePedido(row: PedidoRow) {
     riderId: row.rider_id,
     riderNombre: row.rider_nombre,
     costoDelivery: Number(row.costo_delivery),
+    metodoPago: row.metodo_pago,
   };
 }
 
 const PEDIDO_SELECT = `
   SELECT p.id, p.cliente_nombre, p.nota, p.estado, p.total, p.created_at, p.updated_at,
-    p.rider_id, r.nombre AS rider_nombre, p.costo_delivery,
+    p.rider_id, r.nombre AS rider_nombre, p.costo_delivery, p.metodo_pago,
     COALESCE(
       json_agg(
         json_build_object(
@@ -135,12 +137,14 @@ export const rootValue = {
     nota,
     riderId,
     costoDelivery,
+    metodoPago,
     items,
   }: {
     clienteNombre: string;
     nota?: string;
     riderId?: string;
     costoDelivery?: number;
+    metodoPago?: string;
     items: { menuItemId?: string; nombre: string; cantidad: number; precioUnitario: number }[];
   }) => {
     if (items.length === 0) throw new Error('El pedido necesita al menos un item');
@@ -149,8 +153,9 @@ export const rootValue = {
     try {
       await client.query('BEGIN');
       const pedidoRes = await client.query(
-        'INSERT INTO pedidos (cliente_nombre, nota, rider_id, costo_delivery) VALUES ($1, $2, $3, $4) RETURNING id',
-        [clienteNombre, nota || null, riderId || null, costoDelivery || 0]
+        `INSERT INTO pedidos (cliente_nombre, nota, rider_id, costo_delivery, metodo_pago)
+         VALUES ($1, $2, $3, $4, $5) RETURNING id`,
+        [clienteNombre, nota || null, riderId || null, costoDelivery || 0, metodoPago || 'efectivo']
       );
       const pedidoId = pedidoRes.rows[0].id;
       for (const it of items) {

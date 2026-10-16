@@ -67,6 +67,13 @@ CREATE TABLE IF NOT EXISTS pedidos (
 ALTER TABLE pedidos ADD COLUMN IF NOT EXISTS rider_id BIGINT REFERENCES riders(id) ON DELETE SET NULL;
 ALTER TABLE pedidos ADD COLUMN IF NOT EXISTS costo_delivery NUMERIC(10,2) NOT NULL DEFAULT 0 CHECK (costo_delivery >= 0);
 
+DO $$ BEGIN
+    CREATE TYPE metodo_pago AS ENUM ('efectivo', 'transferencia');
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
+ALTER TABLE pedidos ADD COLUMN IF NOT EXISTS metodo_pago metodo_pago NOT NULL DEFAULT 'efectivo';
+
 CREATE INDEX IF NOT EXISTS pedidos_estado_idx ON pedidos (estado) WHERE estado <> 'entregado';
 CREATE INDEX IF NOT EXISTS pedidos_created_at_idx ON pedidos (created_at);
 CREATE INDEX IF NOT EXISTS pedidos_rider_id_idx ON pedidos (rider_id);

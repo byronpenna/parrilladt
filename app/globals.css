@@ -218,6 +218,8 @@ html, body {
 .delivery-box .stepper { justify-content: center; gap: 18px; }
 .delivery-box .stepper button:disabled { opacity: 0.4; cursor: not-allowed; }
 .subtotal-linea { font-size: 0.95rem; font-weight: 600; color: #666; text-align: right; }
+.metodo-pago-toggle { display: flex; gap: 8px; }
+.metodo-pago-toggle .categoria-btn { flex: 1; text-align: center; }
 .total { font-size: 1.4rem; font-weight: 800; color: var(--verde-oscuro); text-align: right; }
 #pagaConInput {
   width: 100%; padding: 10px 12px; font-size: 1.1rem; font-weight: 700;

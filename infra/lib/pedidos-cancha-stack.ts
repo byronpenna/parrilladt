@@ -25,6 +25,10 @@ const APP_DB_ROLE = 'pedidos_cancha_app';
 // otro proyecto, solo lo leemos (GetSecretValue) durante la migración.
 const MASTER_SECRET_NAME = 'aula/dev/db-credentials';
 
+// AMI fija del bastion OpenVPN (Amazon Linux 2023, x86_64, us-east-1).
+// Ver nota junto a VpnBastion: no usar "latest" aqui.
+const VPN_BASTION_AMI_ID = 'ami-07166c0790dd2e747';
+
 export class PedidosCanchaStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props?: cdk.StackProps) {
     super(scope, id, props);
@@ -178,7 +182,14 @@ export class PedidosCanchaStack extends cdk.Stack {
       vpc,
       vpcSubnets: { subnetType: ec2.SubnetType.PUBLIC },
       instanceType: ec2.InstanceType.of(ec2.InstanceClass.T3, ec2.InstanceSize.MICRO),
-      machineImage: ec2.MachineImage.latestAmazonLinux2023(),
+      // AMI fija (NO "latest"): con latestAmazonLinux2023() cualquier deploy
+      // futuro puede traer una AMI mas nueva, lo que fuerza a CloudFormation
+      // a reemplazar la instancia -> se pierde toda la config de OpenVPN y
+      // cambia la IP publica. Esta es la AMI AL2023 x86_64 vigente al momento
+      // de fijarla; actualizar a mano cuando se quiera, nunca automatico.
+      machineImage: ec2.MachineImage.genericLinux({
+        'us-east-1': VPN_BASTION_AMI_ID,
+      }),
       securityGroup: vpnSecurityGroup,
       role: vpnInstanceRole,
     });
