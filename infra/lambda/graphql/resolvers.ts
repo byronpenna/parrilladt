@@ -256,6 +256,41 @@ export const rootValue = {
     return res.rows[0];
   },
 
+  actualizarCliente: async ({
+    id,
+    nombre,
+    telefono,
+  }: {
+    id: string;
+    nombre?: string;
+    telefono?: string;
+  }) => {
+    const pool = await getPool();
+    try {
+      const res = await pool.query(
+        `UPDATE clientes SET
+           nombre = COALESCE($2, nombre),
+           telefono = COALESCE($3, telefono)
+         WHERE id = $1
+         RETURNING id, nombre, telefono`,
+        [id, nombre?.trim() ?? null, telefono?.trim() ?? null]
+      );
+      if (res.rowCount === 0) throw new Error(`Cliente ${id} no encontrado`);
+      return res.rows[0];
+    } catch (err: unknown) {
+      if (err && typeof err === 'object' && 'code' in err && (err as { code: string }).code === '23505') {
+        throw new Error(`Ya existe un cliente llamado "${nombre?.trim()}"`);
+      }
+      throw err;
+    }
+  },
+
+  eliminarCliente: async ({ id }: { id: string }) => {
+    const pool = await getPool();
+    const res = await pool.query('DELETE FROM clientes WHERE id = $1', [id]);
+    return (res.rowCount ?? 0) > 0;
+  },
+
   agregarProductosMenu: async ({
     items,
   }: {

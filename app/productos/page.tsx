@@ -168,6 +168,9 @@ export default function ProductosPage() {
           <Link href="/riders" className="btn btn-blanco">
             🛵 Riders
           </Link>
+          <Link href="/clientes" className="btn btn-blanco">
+            👤 Clientes
+          </Link>
           <Link href="/reportes" className="btn btn-blanco">
             📈 Reportes
           </Link>

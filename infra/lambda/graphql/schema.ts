@@ -100,6 +100,8 @@ export const schema = buildSchema(`
     actualizarEstado(id: ID!, estado: EstadoPedido!): Pedido!
     actualizarPedido(id: ID!, riderId: ID, metodoPago: MetodoPago, horaEntrega: String): Pedido!
     agregarCliente(nombre: String!, telefono: String): Cliente!
+    actualizarCliente(id: ID!, nombre: String, telefono: String): Cliente!
+    eliminarCliente(id: ID!): Boolean!
     agregarProductosMenu(items: [MenuItemInput!]!): [MenuItem!]!
     crearProductoMenu(nombre: String!, categoria: String!, precio: Float!): MenuItem!
     actualizarProductoMenu(

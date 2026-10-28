@@ -105,6 +105,20 @@ export const MUTATION_AGREGAR_CLIENTE = `
   }
 `;
 
+export const MUTATION_ACTUALIZAR_CLIENTE = `
+  mutation ActualizarCliente($id: ID!, $nombre: String, $telefono: String) {
+    actualizarCliente(id: $id, nombre: $nombre, telefono: $telefono) {
+      id nombre telefono
+    }
+  }
+`;
+
+export const MUTATION_ELIMINAR_CLIENTE = `
+  mutation EliminarCliente($id: ID!) {
+    eliminarCliente(id: $id)
+  }
+`;
+
 export const MUTATION_CREAR_PRODUCTO = `
   mutation CrearProducto($nombre: String!, $categoria: String!, $precio: Float!) {
     crearProductoMenu(nombre: $nombre, categoria: $categoria, precio: $precio) {

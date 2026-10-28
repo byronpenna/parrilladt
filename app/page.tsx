@@ -66,6 +66,7 @@ export default function TabletPage() {
   const [clientes, setClientes] = useState<Cliente[]>([]);
   const [riders, setRiders] = useState<Rider[]>([]);
   const [categoriaActiva, setCategoriaActiva] = useState('Todos');
+  const [busquedaProducto, setBusquedaProducto] = useState('');
   const [carrito, setCarrito] = useState<Map<string, ItemCarrito>>(new Map());
   const [clienteInput, setClienteInput] = useState('');
   const [telefono, setTelefono] = useState('');
@@ -326,6 +327,11 @@ export default function TabletPage() {
   }
 
   const categorias = ['Todos', ...new Set(menu.map((m) => m.categoria || 'Otros'))];
+  const menuVisible = menu.filter(
+    (m) =>
+      m.nombre.toLowerCase().includes(busquedaProducto.trim().toLowerCase()) &&
+      (categoriaActiva === 'Todos' || (m.categoria || 'Otros') === categoriaActiva)
+  );
   const subtotalItems = [...carrito.values()].reduce((s, it) => s + it.cantidad * it.precio, 0);
   const total = subtotalItems + (riderId ? costoDelivery : 0);
   const pagaConNum = parseFloat(pagaCon);
@@ -342,6 +348,9 @@ export default function TabletPage() {
           </Link>
           <Link href="/productos" className="btn btn-blanco">
             🍔 Productos
+          </Link>
+          <Link href="/clientes" className="btn btn-blanco">
+            👤 Clientes
           </Link>
           <Link href="/reportes" className="btn btn-blanco">
             📈 Reportes
@@ -375,6 +384,20 @@ export default function TabletPage() {
             </button>
           </div>
 
+          <div className="buscador-box card-blanca">
+            <input
+              type="search"
+              placeholder="🔍 Buscar producto..."
+              value={busquedaProducto}
+              onChange={(e) => setBusquedaProducto(e.target.value)}
+            />
+            {busquedaProducto && (
+              <button className="btn btn-blanco" onClick={() => setBusquedaProducto('')}>
+                ✕
+              </button>
+            )}
+          </div>
+
           <div className="categorias">
             {categorias.map((c) => (
               <button
@@ -388,9 +411,12 @@ export default function TabletPage() {
           </div>
 
           <div className="menu-grid">
+            {menuVisible.length === 0 && (
+              <div className="vacio-col-claro">No hay productos que coincidan con la búsqueda</div>
+            )}
             {menu.map((m) => {
               const cant = carrito.get(m.nombre)?.cantidad || 0;
-              const oculto = categoriaActiva !== 'Todos' && (m.categoria || 'Otros') !== categoriaActiva;
+              const oculto = !menuVisible.includes(m);
               return (
                 <div key={m.id} className={`item-card card-blanca ${oculto ? 'categoria-oculta' : ''}`}>
                   <h3>{m.nombre}</h3>
