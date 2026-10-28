@@ -10,6 +10,7 @@ const CLAVE_MENU = 'cancha_menu_cache';
 const CLAVE_CLIENTES = 'cancha_clientes_cache';
 const CLAVE_RIDERS = 'cancha_riders_cache';
 const CLAVE_PENDIENTES = 'cancha_pedidos_pendientes';
+const CLAVE_PROGRAMADOS = 'cancha_pedidos_programados';
 
 const COSTO_DELIVERY_MIN = 1;
 const COSTO_DELIVERY_PASO = 0.5;
@@ -32,9 +33,31 @@ interface PedidoPendiente {
   items: { menuItemId: string; nombre: string; cantidad: number; precioUnitario: number }[];
 }
 
+interface PedidoProgramado extends PedidoPendiente {
+  id: string;
+  enviarEn: string;
+}
+
 function generarClienteRapido() {
   const codigo = Math.random().toString(36).substring(2, 5).toUpperCase();
   return `Rápido-${codigo}`;
+}
+
+function generarId() {
+  return `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+}
+
+/** Hora concreta de hoy; si ya pasó, se asume para mañana a esa misma hora. */
+function calcularFechaProgramada(hora: string) {
+  const [h, m] = hora.split(':').map(Number);
+  const fecha = new Date();
+  fecha.setHours(h, m, 0, 0);
+  if (fecha.getTime() <= Date.now()) fecha.setDate(fecha.getDate() + 1);
+  return fecha;
+}
+
+function leerProgramados(): PedidoProgramado[] {
+  return JSON.parse(localStorage.getItem(CLAVE_PROGRAMADOS) || '[]');
 }
 
 export default function TabletPage() {
@@ -51,6 +74,9 @@ export default function TabletPage() {
   const [costoDelivery, setCostoDelivery] = useState(COSTO_DELIVERY_MIN);
   const [metodoPago, setMetodoPago] = useState<MetodoPago>('efectivo');
   const [pagaCon, setPagaCon] = useState('');
+  const [modoEnvio, setModoEnvio] = useState<'inmediato' | 'programado'>('inmediato');
+  const [horaProgramada, setHoraProgramada] = useState('');
+  const [programados, setProgramados] = useState<PedidoProgramado[]>([]);
   const [enviando, setEnviando] = useState(false);
   const [syncStatus, setSyncStatus] = useState<{ texto: string; tipo: '' | 'ok' | 'error' }>({
     texto: '',
@@ -70,7 +96,11 @@ export default function TabletPage() {
     cargarMenu();
     cargarClientes();
     cargarRiders();
-    const id = setInterval(reintentarPendientes, 15000);
+    setProgramados(leerProgramados());
+    const id = setInterval(() => {
+      reintentarPendientes();
+      procesarProgramados();
+    }, 15000);
     return () => clearInterval(id);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -188,9 +218,60 @@ export default function TabletPage() {
     }
   }
 
+  function programarPedido(payload: PedidoPendiente, enviarEn: string) {
+    const lista = [...leerProgramados(), { ...payload, id: generarId(), enviarEn }];
+    localStorage.setItem(CLAVE_PROGRAMADOS, JSON.stringify(lista));
+    setProgramados(lista);
+  }
+
+  function cancelarProgramado(id: string) {
+    const lista = leerProgramados().filter((p) => p.id !== id);
+    localStorage.setItem(CLAVE_PROGRAMADOS, JSON.stringify(lista));
+    setProgramados(lista);
+    mostrarToast('Envío programado cancelado');
+  }
+
+  async function procesarProgramados() {
+    const lista = leerProgramados();
+    const ahora = Date.now();
+    const vencidos = lista.filter((p) => new Date(p.enviarEn).getTime() <= ahora);
+    if (vencidos.length === 0) return;
+
+    const restantes = lista.filter((p) => new Date(p.enviarEn).getTime() > ahora);
+    localStorage.setItem(CLAVE_PROGRAMADOS, JSON.stringify(restantes));
+    setProgramados(restantes);
+
+    for (const { id, enviarEn, ...payload } of vencidos) {
+      try {
+        await gqlRequest(MUTATION_CREAR_PEDIDO, payload);
+        sincronizarTelefonoCliente(payload.clienteNombre, payload.telefono);
+        mostrarToast(`Pedido programado de ${payload.clienteNombre} enviado a cocina`);
+      } catch {
+        guardarPendiente(payload);
+      }
+    }
+  }
+
+  function resetFormulario() {
+    setCarrito(new Map());
+    setClienteInput('');
+    setTelefono('');
+    setNota('');
+    setRiderId('');
+    setCostoDelivery(COSTO_DELIVERY_MIN);
+    setMetodoPago('efectivo');
+    setPagaCon('');
+    setModoEnvio('inmediato');
+    setHoraProgramada('');
+  }
+
   async function enviarPedido() {
     if (carrito.size === 0) {
       mostrarToast('Agrega al menos un producto');
+      return;
+    }
+    if (modoEnvio === 'programado' && !horaProgramada) {
+      mostrarToast('Elige una hora para programar el envío');
       return;
     }
     const cliente = clienteInput.trim() || generarClienteRapido();
@@ -211,6 +292,14 @@ export default function TabletPage() {
       items,
     };
 
+    if (modoEnvio === 'programado') {
+      const fechaEnvio = calcularFechaProgramada(horaProgramada);
+      programarPedido(payload, fechaEnvio.toISOString());
+      mostrarToast(`Pedido programado para las ${fechaEnvio.toLocaleTimeString('es', { hour: '2-digit', minute: '2-digit' })}`);
+      resetFormulario();
+      return;
+    }
+
     setEnviando(true);
     setSyncStatus({ texto: 'Enviando...', tipo: '' });
 
@@ -225,26 +314,12 @@ export default function TabletPage() {
         setClientes((prev) => [...prev, { id: 'temp', nombre: cliente, telefono: tel }]);
       }
 
-      setCarrito(new Map());
-      setClienteInput('');
-      setTelefono('');
-      setNota('');
-      setRiderId('');
-      setCostoDelivery(COSTO_DELIVERY_MIN);
-      setMetodoPago('efectivo');
-      setPagaCon('');
+      resetFormulario();
     } catch {
       guardarPendiente(payload);
       setSyncStatus({ texto: 'Sin conexión: pedido guardado, se enviará solo', tipo: 'error' });
       mostrarToast('Sin conexión, el pedido quedó en cola');
-      setCarrito(new Map());
-      setClienteInput('');
-      setTelefono('');
-      setNota('');
-      setRiderId('');
-      setCostoDelivery(COSTO_DELIVERY_MIN);
-      setMetodoPago('efectivo');
-      setPagaCon('');
+      resetFormulario();
     } finally {
       setEnviando(false);
     }
@@ -337,6 +412,26 @@ export default function TabletPage() {
 
         <aside className="carrito-panel card-blanca">
           <h2>Pedido actual</h2>
+          {programados.length > 0 && (
+            <div className="programados-box">
+              <div className="programados-titulo">🕒 Programados ({programados.length})</div>
+              <ul className="programados-lista">
+                {[...programados]
+                  .sort((a, b) => a.enviarEn.localeCompare(b.enviarEn))
+                  .map((p) => (
+                    <li key={p.id}>
+                      <span>
+                        {new Date(p.enviarEn).toLocaleTimeString('es', { hour: '2-digit', minute: '2-digit' })} ·{' '}
+                        {p.clienteNombre}
+                      </span>
+                      <button className="quitar" onClick={() => cancelarProgramado(p.id)} title="Cancelar envío programado">
+                        ✕
+                      </button>
+                    </li>
+                  ))}
+              </ul>
+            </div>
+          )}
           <ul id="carritoLista">
             {carrito.size === 0 ? (
               <li className="vacio">Aún no agregas productos</li>
@@ -428,8 +523,41 @@ export default function TabletPage() {
               )}
             </>
           )}
-          <button className="btn btn-naranja" id="btnEnviar" disabled={enviando} onClick={enviarPedido}>
-            Enviar a cocina
+          <div className="metodo-pago-toggle">
+            <button
+              type="button"
+              className={`categoria-btn ${modoEnvio === 'inmediato' ? 'activa' : ''}`}
+              onClick={() => setModoEnvio('inmediato')}
+            >
+              🚀 Enviar ahora
+            </button>
+            <button
+              type="button"
+              className={`categoria-btn ${modoEnvio === 'programado' ? 'activa' : ''}`}
+              onClick={() => setModoEnvio('programado')}
+            >
+              🕒 Programar envío
+            </button>
+          </div>
+          {modoEnvio === 'programado' && (
+            <div className="delivery-box">
+              <label htmlFor="horaProgramadaInput">¿A qué hora se envía?</label>
+              <input
+                id="horaProgramadaInput"
+                className="input-hora"
+                type="time"
+                value={horaProgramada}
+                onChange={(e) => setHoraProgramada(e.target.value)}
+              />
+            </div>
+          )}
+          <button
+            className="btn btn-naranja"
+            id="btnEnviar"
+            disabled={enviando || (modoEnvio === 'programado' && !horaProgramada)}
+            onClick={enviarPedido}
+          >
+            {modoEnvio === 'programado' ? 'Programar pedido' : 'Enviar a cocina'}
           </button>
           <div id="syncStatus" className={syncStatus.tipo}>
             {syncStatus.texto}
