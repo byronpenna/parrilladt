@@ -22,6 +22,7 @@ interface PedidoRow {
   rider_nombre: string | null;
   costo_delivery: string;
   metodo_pago: string;
+  hora_entrega: Date | null;
 }
 
 function shapePedido(row: PedidoRow) {
@@ -46,12 +47,13 @@ function shapePedido(row: PedidoRow) {
     riderNombre: row.rider_nombre,
     costoDelivery: Number(row.costo_delivery),
     metodoPago: row.metodo_pago,
+    horaEntrega: row.hora_entrega ? new Date(row.hora_entrega).toISOString() : null,
   };
 }
 
 const PEDIDO_SELECT = `
   SELECT p.id, p.cliente_nombre, p.nota, p.estado, p.total, p.created_at, p.updated_at,
-    p.rider_id, r.nombre AS rider_nombre, p.costo_delivery, p.metodo_pago,
+    p.rider_id, r.nombre AS rider_nombre, p.costo_delivery, p.metodo_pago, p.hora_entrega,
     COALESCE(
       json_agg(
         json_build_object(
@@ -180,6 +182,39 @@ export const rootValue = {
     const res = await pool.query('UPDATE pedidos SET estado = $1 WHERE id = $2 RETURNING id', [estado, id]);
     if (res.rowCount === 0) throw new Error(`Pedido ${id} no encontrado`);
     return fetchPedido(pool, id);
+  },
+
+  actualizarPedido: async (args: {
+    id: string;
+    riderId?: string | null;
+    metodoPago?: string;
+    horaEntrega?: string | null;
+  }) => {
+    const pool = await getPool();
+    const sets: string[] = [];
+    const values: unknown[] = [];
+    let i = 2;
+    // hasOwnProperty, no destructuring: distingue "no vino la variable" (no tocar) de "vino null" (limpiar)
+    if (Object.prototype.hasOwnProperty.call(args, 'riderId')) {
+      sets.push(`rider_id = $${i++}`);
+      values.push(args.riderId || null);
+    }
+    if (args.metodoPago) {
+      sets.push(`metodo_pago = $${i++}`);
+      values.push(args.metodoPago);
+    }
+    if (Object.prototype.hasOwnProperty.call(args, 'horaEntrega')) {
+      sets.push(`hora_entrega = $${i++}`);
+      values.push(args.horaEntrega || null);
+    }
+    if (sets.length > 0) {
+      const res = await pool.query(`UPDATE pedidos SET ${sets.join(', ')} WHERE id = $1 RETURNING id`, [
+        args.id,
+        ...values,
+      ]);
+      if (res.rowCount === 0) throw new Error(`Pedido ${args.id} no encontrado`);
+    }
+    return fetchPedido(pool, args.id);
   },
 
   agregarCliente: async ({ nombre, telefono }: { nombre: string; telefono?: string }) => {

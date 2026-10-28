@@ -31,6 +31,7 @@ export const QUERY_PEDIDOS = `
       riderNombre
       costoDelivery
       metodoPago
+      horaEntrega
     }
   }
 `;
@@ -80,6 +81,18 @@ export const MUTATION_ACTUALIZAR_ESTADO = `
     actualizarEstado(id: $id, estado: $estado) {
       id
       estado
+    }
+  }
+`;
+
+export const MUTATION_ACTUALIZAR_PEDIDO = `
+  mutation ActualizarPedido($id: ID!, $riderId: ID, $metodoPago: MetodoPago, $horaEntrega: String) {
+    actualizarPedido(id: $id, riderId: $riderId, metodoPago: $metodoPago, horaEntrega: $horaEntrega) {
+      id
+      riderId
+      riderNombre
+      metodoPago
+      horaEntrega
     }
   }
 `;

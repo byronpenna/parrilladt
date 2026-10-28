@@ -44,4 +44,5 @@ export interface Pedido {
   riderNombre: string | null;
   costoDelivery: number;
   metodoPago: MetodoPago;
+  horaEntrega: string | null;
 }

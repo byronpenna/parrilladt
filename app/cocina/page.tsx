@@ -1,9 +1,9 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type MouseEvent } from 'react';
 import { gqlRequest } from '@/lib/graphql-client';
-import { QUERY_PEDIDOS, MUTATION_ACTUALIZAR_ESTADO } from '@/lib/queries';
-import type { Pedido, EstadoPedido } from '@/lib/types';
+import { QUERY_PEDIDOS, QUERY_RIDERS, MUTATION_ACTUALIZAR_ESTADO, MUTATION_ACTUALIZAR_PEDIDO } from '@/lib/queries';
+import type { Pedido, EstadoPedido, MetodoPago, Rider } from '@/lib/types';
 
 const SIGUIENTE_ESTADO: Partial<Record<EstadoPedido, EstadoPedido>> = {
   pendiente: 'en_preparacion',
@@ -27,6 +27,23 @@ function claseEspera(mins: number) {
   return '';
 }
 
+function formatoHoraEntrega(iso: string) {
+  return new Date(iso).toLocaleTimeString('es', { hour: '2-digit', minute: '2-digit' });
+}
+
+function horaInputDe(iso: string | null) {
+  if (!iso) return '';
+  const d = new Date(iso);
+  return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+}
+
+function calcularFechaEntrega(hora: string) {
+  const [h, m] = hora.split(':').map(Number);
+  const d = new Date();
+  d.setHours(h, m, 0, 0);
+  return d;
+}
+
 export default function CocinaPage() {
   const [reloj, setReloj] = useState('--:--:--');
   const [pedidos, setPedidos] = useState<Pedido[]>([]);
@@ -35,6 +52,12 @@ export default function CocinaPage() {
     ok: true,
   });
   const [, forceTick] = useState(0);
+  const [riders, setRiders] = useState<Rider[]>([]);
+  const [editId, setEditId] = useState<string | null>(null);
+  const [editRiderId, setEditRiderId] = useState('');
+  const [editMetodoPago, setEditMetodoPago] = useState<MetodoPago>('efectivo');
+  const [editHoraEntrega, setEditHoraEntrega] = useState('');
+  const [guardandoEdit, setGuardandoEdit] = useState(false);
 
   useEffect(() => {
     const tick = () =>
@@ -45,6 +68,7 @@ export default function CocinaPage() {
   }, []);
 
   useEffect(() => {
+    cargarRiders();
     cargarPedidos();
     const idFetch = setInterval(cargarPedidos, 6000);
     const idRender = setInterval(() => forceTick((n) => n + 1), 10000);
@@ -62,6 +86,48 @@ export default function CocinaPage() {
       setEstadoConexion({ texto: '● En línea', ok: true });
     } catch {
       setEstadoConexion({ texto: '● Sin conexión', ok: false });
+    }
+  }
+
+  async function cargarRiders() {
+    try {
+      const data = await gqlRequest<{ riders: Rider[] }>(QUERY_RIDERS);
+      setRiders(data.riders);
+    } catch {
+      // la edición simplemente mostrará la lista vacía si falla
+    }
+  }
+
+  function iniciarEdicion(p: Pedido, e: MouseEvent) {
+    e.stopPropagation();
+    setEditId(p.id);
+    setEditRiderId(p.riderId || '');
+    setEditMetodoPago(p.metodoPago);
+    setEditHoraEntrega(horaInputDe(p.horaEntrega));
+  }
+
+  function cancelarEdicion(e: MouseEvent) {
+    e.stopPropagation();
+    setEditId(null);
+  }
+
+  async function guardarEdicion(id: string, e: MouseEvent) {
+    e.stopPropagation();
+    setGuardandoEdit(true);
+    try {
+      const horaEntrega = editHoraEntrega ? calcularFechaEntrega(editHoraEntrega).toISOString() : null;
+      const data = await gqlRequest<{ actualizarPedido: Pedido }>(MUTATION_ACTUALIZAR_PEDIDO, {
+        id,
+        riderId: editRiderId || null,
+        metodoPago: editMetodoPago,
+        horaEntrega,
+      });
+      setPedidos((prev) => prev.map((p) => (p.id === id ? { ...p, ...data.actualizarPedido } : p)));
+      setEditId(null);
+    } catch {
+      cargarPedidos();
+    } finally {
+      setGuardandoEdit(false);
     }
   }
 
@@ -127,7 +193,82 @@ export default function CocinaPage() {
                       </div>
                       <div className="items">{p.itemsTexto}</div>
                       {p.nota && <div className="nota">📝 {p.nota}</div>}
-                      <div className="toca">Toca para avanzar →</div>
+                      <div className="pedido-meta">
+                        <span className="pedido-meta-chip">
+                          {p.riderNombre ? `🛵 ${p.riderNombre}` : '🛵 Sin rider'}
+                        </span>
+                        <span className="pedido-meta-chip">
+                          {p.metodoPago === 'efectivo' ? '💵 Efectivo' : '🏦 Transferencia'}
+                        </span>
+                        {p.horaEntrega && (
+                          <span className="pedido-meta-chip">🕒 {formatoHoraEntrega(p.horaEntrega)}</span>
+                        )}
+                      </div>
+
+                      {editId === p.id ? (
+                        <div className="pedido-edit" onClick={(e) => e.stopPropagation()}>
+                          <div className="filtro-campo">
+                            <label htmlFor={`editRider-${p.id}`}>Rider</label>
+                            <select
+                              id={`editRider-${p.id}`}
+                              value={editRiderId}
+                              onChange={(e) => setEditRiderId(e.target.value)}
+                            >
+                              <option value="">Sin rider</option>
+                              {riders.map((r) => (
+                                <option key={r.id} value={r.id}>
+                                  {r.nombre}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                          <div className="metodo-pago-toggle">
+                            <button
+                              type="button"
+                              className={`categoria-btn ${editMetodoPago === 'efectivo' ? 'activa' : ''}`}
+                              onClick={() => setEditMetodoPago('efectivo')}
+                            >
+                              💵 Efectivo
+                            </button>
+                            <button
+                              type="button"
+                              className={`categoria-btn ${editMetodoPago === 'transferencia' ? 'activa' : ''}`}
+                              onClick={() => setEditMetodoPago('transferencia')}
+                            >
+                              🏦 Transferencia
+                            </button>
+                          </div>
+                          <div className="filtro-campo">
+                            <label htmlFor={`editHora-${p.id}`}>Hora de entrega</label>
+                            <input
+                              id={`editHora-${p.id}`}
+                              type="time"
+                              className="input-hora"
+                              value={editHoraEntrega}
+                              onChange={(e) => setEditHoraEntrega(e.target.value)}
+                            />
+                          </div>
+                          <div className="pedido-edit-acciones">
+                            <button
+                              className="btn btn-verde"
+                              disabled={guardandoEdit}
+                              onClick={(e) => guardarEdicion(p.id, e)}
+                            >
+                              Guardar
+                            </button>
+                            <button className="btn btn-blanco" onClick={cancelarEdicion}>
+                              Cancelar
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="pedido-footer">
+                          <button className="btn-editar-pedido" onClick={(e) => iniciarEdicion(p, e)}>
+                            ✏️ Editar
+                          </button>
+                          <span className="toca">Toca para avanzar →</span>
+                        </div>
+                      )}
                     </div>
                   );
                 })
