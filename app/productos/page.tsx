@@ -158,7 +158,7 @@ export default function ProductosPage() {
     <>
       <header className="cancha-header">
         <h1>🍔 Productos</h1>
-        <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+        <div className="cancha-header-nav">
           <Link href="/" className="btn btn-blanco">
             ⚽ Tomar pedidos
           </Link>

@@ -342,7 +342,7 @@ export default function TabletPage() {
     <>
       <header className="cancha-header">
         <h1>⚽ Toma de Pedidos</h1>
-        <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+        <div className="cancha-header-nav">
           <Link href="/pedidos" className="btn btn-blanco">
             📋 Pedidos
           </Link>

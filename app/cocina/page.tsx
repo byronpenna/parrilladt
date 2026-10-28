@@ -170,7 +170,7 @@ export default function CocinaPage() {
     <div className="cocina-body">
       <header className="cancha-header">
         <h1>🍽 Cocina en vivo</h1>
-        <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+        <div className="cancha-header-nav">
           <div id="estadoConexion" style={{ color: estadoConexion.ok ? 'var(--verde-oscuro)' : '#c0392b' }}>
             {estadoConexion.texto}
           </div>

@@ -127,7 +127,7 @@ export default function ClientesPage() {
     <>
       <header className="cancha-header">
         <h1>👤 Clientes</h1>
-        <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+        <div className="cancha-header-nav">
           <Link href="/" className="btn btn-blanco">
             ⚽ Tomar pedidos
           </Link>

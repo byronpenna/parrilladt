@@ -67,6 +67,14 @@ html, body {
   border-radius: 8px;
 }
 
+.cancha-header-nav {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
 .btn {
   border: none;
   border-radius: 10px;
@@ -708,4 +716,79 @@ html, body {
   background: var(--blanco);
   color: var(--verde-oscuro);
   font-weight: 700;
+}
+
+/* ── Responsive: tablet y celular ────────────────────────────────────
+   Por encima de 860px el diseño de escritorio/tablet (definido arriba)
+   se mantiene igual tal cual estaba. De 641px a 860px es tablet angosta
+   (se ajustan nav/tablas/kanban pero la toma de pedidos conserva sus
+   dos paneles lado a lado, que es como ya funcionaba bien en tablet).
+   680px y 640px son solo "no rompas, apílate" para evitar overflow antes
+   de llegar al breakpoint de celular en 480px. */
+@media (max-width: 860px) {
+  .cancha-header {
+    flex-wrap: wrap;
+    padding: 12px 16px;
+    row-gap: 10px;
+  }
+  .cancha-header h1 { font-size: 1.3rem; }
+  .cancha-header::after { display: none; }
+  .cancha-header-nav { justify-content: flex-start; width: 100%; }
+  .cancha-header-nav .btn { padding: 8px 12px; font-size: 0.85rem; }
+  .cancha-header .reloj { font-size: 1rem; padding: 5px 10px; }
+
+  .pedidos-page,
+  .reportes-page { padding: 10px; }
+
+  .filtro-campo select,
+  .filtro-campo input { min-width: 140px; }
+
+  .columnas {
+    grid-template-columns: 1fr;
+    height: auto;
+    padding: 12px;
+  }
+  .cocina-body { overflow: visible; }
+  .columna { height: 70vh; }
+}
+
+@media (max-width: 680px) {
+  .reportes-fila .chart-card { min-width: 0; }
+}
+
+/* Debajo de esto ya es celular: recién aquí se apilan los paneles de la
+   toma de pedidos (en tablet, aunque sea angosta, se quedan lado a lado). */
+@media (max-width: 640px) {
+  .layout {
+    flex-direction: column;
+    height: auto;
+    padding: 10px;
+  }
+  .menu-panel { overflow: visible; }
+  .menu-grid {
+    flex: none;
+    overflow-y: visible;
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  }
+  .carrito-panel { max-width: none; }
+  #carritoLista { flex: none; max-height: 45vh; }
+
+  .buscador-box { flex-wrap: wrap; }
+}
+
+@media (max-width: 480px) {
+  .cancha-header h1 { font-size: 1.1rem; }
+
+  .filtros-pedidos { gap: 10px; }
+  .filtro-campo { flex: 1 1 100%; }
+  .filtro-campo select,
+  .filtro-campo input { width: 100%; min-width: 0; }
+
+  .menu-grid { grid-template-columns: repeat(auto-fill, minmax(145px, 1fr)); }
+  .stepper button { width: 36px; height: 36px; font-size: 1.1rem; }
+
+  .producto-top-row { grid-template-columns: 96px 1fr auto; }
+
+  .chart-card { overflow-x: auto; }
+  .chart-ventas-wrap { min-width: 540px; }
 }
