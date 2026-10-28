@@ -11,6 +11,12 @@ const SIGUIENTE_ESTADO: Partial<Record<EstadoPedido, EstadoPedido>> = {
   listo: 'entregado',
 };
 
+const ANTERIOR_ESTADO: Partial<Record<EstadoPedido, EstadoPedido>> = {
+  en_preparacion: 'pendiente',
+  listo: 'en_preparacion',
+  entregado: 'listo',
+};
+
 const COLUMNA_POR_ESTADO: Partial<Record<EstadoPedido, 'colPendiente' | 'colPreparacion' | 'colListo'>> = {
   pendiente: 'colPendiente',
   en_preparacion: 'colPreparacion',
@@ -131,12 +137,13 @@ export default function CocinaPage() {
     }
   }
 
-  async function avanzarEstado(id: string, estadoActual: EstadoPedido) {
-    const siguiente = SIGUIENTE_ESTADO[estadoActual];
-    if (!siguiente) return;
-    setPedidos((prev) => prev.map((p) => (p.id === id ? { ...p, estado: siguiente } : p)));
+  async function moverEstado(id: string, estadoActual: EstadoPedido, direccion: 'adelante' | 'atras', e: MouseEvent) {
+    e.stopPropagation();
+    const destino = direccion === 'adelante' ? SIGUIENTE_ESTADO[estadoActual] : ANTERIOR_ESTADO[estadoActual];
+    if (!destino) return;
+    setPedidos((prev) => prev.map((p) => (p.id === id ? { ...p, estado: destino } : p)));
     try {
-      await gqlRequest(MUTATION_ACTUALIZAR_ESTADO, { id, estado: siguiente });
+      await gqlRequest(MUTATION_ACTUALIZAR_ESTADO, { id, estado: destino });
     } catch {
       // el próximo refresco automático corrige el estado si algo falló
     }
@@ -181,12 +188,10 @@ export default function CocinaPage() {
               ) : (
                 columnas[id].map((p) => {
                   const mins = minutosDesde(p.createdAt);
+                  const haySiguiente = Boolean(SIGUIENTE_ESTADO[p.estado]);
+                  const hayAnterior = Boolean(ANTERIOR_ESTADO[p.estado]);
                   return (
-                    <div
-                      key={p.id}
-                      className={`pedido-card ${claseEspera(mins)}`}
-                      onClick={() => avanzarEstado(p.id, p.estado)}
-                    >
+                    <div key={p.id} className={`pedido-card ${claseEspera(mins)}`}>
                       <div className="fila-top">
                         <span className="cliente">{p.clienteNombre}</span>
                         <span className="tiempo">{mins} min</span>
@@ -263,10 +268,25 @@ export default function CocinaPage() {
                         </div>
                       ) : (
                         <div className="pedido-footer">
+                          <button
+                            className="btn-flecha"
+                            disabled={!hayAnterior}
+                            aria-label="Retroceder de estado"
+                            onClick={(e) => moverEstado(p.id, p.estado, 'atras', e)}
+                          >
+                            ◀
+                          </button>
                           <button className="btn-editar-pedido" onClick={(e) => iniciarEdicion(p, e)}>
                             ✏️ Editar
                           </button>
-                          <span className="toca">Toca para avanzar →</span>
+                          <button
+                            className="btn-flecha"
+                            disabled={!haySiguiente}
+                            aria-label="Avanzar de estado"
+                            onClick={(e) => moverEstado(p.id, p.estado, 'adelante', e)}
+                          >
+                            ▶
+                          </button>
                         </div>
                       )}
                     </div>

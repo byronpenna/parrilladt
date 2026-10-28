@@ -92,6 +92,19 @@ CREATE TABLE IF NOT EXISTS pedido_items (
 
 CREATE INDEX IF NOT EXISTS pedido_items_pedido_id_idx ON pedido_items (pedido_id);
 
+-- ── Historial de estados de cada pedido ────────────────────────────────
+-- Una fila por cada vez que el pedido entra a un estado (incluye retrocesos).
+-- El tiempo que un pedido pasó en un estado = la siguiente fila de ese mismo
+-- pedido (por created_at) menos esta, o now() si es la última fila.
+CREATE TABLE IF NOT EXISTS pedido_estado_historial (
+    id          BIGSERIAL PRIMARY KEY,
+    pedido_id   BIGINT NOT NULL REFERENCES pedidos(id) ON DELETE CASCADE,
+    estado      estado_pedido NOT NULL,
+    created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS pedido_estado_historial_pedido_id_idx ON pedido_estado_historial (pedido_id);
+
 -- ── trigger para mantener updated_at y total al día ────────────────────
 CREATE OR REPLACE FUNCTION set_updated_at()
 RETURNS TRIGGER AS $$

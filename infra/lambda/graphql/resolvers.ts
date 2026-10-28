@@ -23,6 +23,7 @@ interface PedidoRow {
   costo_delivery: string;
   metodo_pago: string;
   hora_entrega: Date | null;
+  historial: { estado: string; createdAt: string }[];
 }
 
 function shapePedido(row: PedidoRow) {
@@ -48,12 +49,24 @@ function shapePedido(row: PedidoRow) {
     costoDelivery: Number(row.costo_delivery),
     metodoPago: row.metodo_pago,
     horaEntrega: row.hora_entrega ? new Date(row.hora_entrega).toISOString() : null,
+    historialEstados: (row.historial || []).map((h) => ({
+      estado: h.estado,
+      createdAt: new Date(h.createdAt).toISOString(),
+    })),
   };
 }
 
 const PEDIDO_SELECT = `
   SELECT p.id, p.cliente_nombre, p.nota, p.estado, p.total, p.created_at, p.updated_at,
     p.rider_id, r.nombre AS rider_nombre, p.costo_delivery, p.metodo_pago, p.hora_entrega,
+    (
+      SELECT COALESCE(
+        json_agg(json_build_object('estado', h.estado, 'createdAt', h.created_at) ORDER BY h.created_at),
+        '[]'
+      )
+      FROM pedido_estado_historial h
+      WHERE h.pedido_id = p.id
+    ) AS historial,
     COALESCE(
       json_agg(
         json_build_object(
@@ -160,6 +173,9 @@ export const rootValue = {
         [clienteNombre, nota || null, riderId || null, costoDelivery || 0, metodoPago || 'efectivo']
       );
       const pedidoId = pedidoRes.rows[0].id;
+      await client.query(`INSERT INTO pedido_estado_historial (pedido_id, estado) VALUES ($1, 'pendiente')`, [
+        pedidoId,
+      ]);
       for (const it of items) {
         await client.query(
           `INSERT INTO pedido_items (pedido_id, menu_item_id, item_nombre, cantidad, precio_unitario)
@@ -179,8 +195,19 @@ export const rootValue = {
 
   actualizarEstado: async ({ id, estado }: { id: string; estado: string }) => {
     const pool = await getPool();
-    const res = await pool.query('UPDATE pedidos SET estado = $1 WHERE id = $2 RETURNING id', [estado, id]);
-    if (res.rowCount === 0) throw new Error(`Pedido ${id} no encontrado`);
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+      const res = await client.query('UPDATE pedidos SET estado = $1 WHERE id = $2 RETURNING id', [estado, id]);
+      if (res.rowCount === 0) throw new Error(`Pedido ${id} no encontrado`);
+      await client.query('INSERT INTO pedido_estado_historial (pedido_id, estado) VALUES ($1, $2)', [id, estado]);
+      await client.query('COMMIT');
+    } catch (err) {
+      await client.query('ROLLBACK');
+      throw err;
+    } finally {
+      client.release();
+    }
     return fetchPedido(pool, id);
   },
 

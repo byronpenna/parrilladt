@@ -30,6 +30,11 @@ export interface PedidoItem {
   subtotal: number;
 }
 
+export interface PedidoEstadoEvento {
+  estado: EstadoPedido;
+  createdAt: string;
+}
+
 export interface Pedido {
   id: string;
   clienteNombre: string;
@@ -45,4 +50,5 @@ export interface Pedido {
   costoDelivery: number;
   metodoPago: MetodoPago;
   horaEntrega: string | null;
+  historialEstados: PedidoEstadoEvento[];
 }

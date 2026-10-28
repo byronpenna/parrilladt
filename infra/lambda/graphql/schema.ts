@@ -43,6 +43,11 @@ export const schema = buildSchema(`
     subtotal: Float!
   }
 
+  type PedidoEstadoEvento {
+    estado: EstadoPedido!
+    createdAt: String!
+  }
+
   type Pedido {
     id: ID!
     clienteNombre: String!
@@ -58,6 +63,7 @@ export const schema = buildSchema(`
     costoDelivery: Float!
     metodoPago: MetodoPago!
     horaEntrega: String
+    historialEstados: [PedidoEstadoEvento!]!
   }
 
   type Query {

@@ -412,7 +412,6 @@ html, body {
   border-radius: 12px;
   padding: 14px 16px;
   box-shadow: var(--sombra);
-  cursor: pointer;
   user-select: none;
 }
 .pedido-card.espera-media { border-left-color: var(--naranja); }
@@ -444,11 +443,6 @@ html, body {
   font-style: italic;
   color: var(--naranja-oscuro);
 }
-.pedido-card .toca {
-  font-size: 0.85rem;
-  text-align: right;
-  color: #999;
-}
 .vacio-col { text-align: center; color: rgba(255,255,255,0.85); padding: 24px 0; font-size: 1.1rem; }
 
 .pedido-card .pedido-meta {
@@ -469,9 +463,11 @@ html, body {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: 8px;
   margin-top: 10px;
 }
 .btn-editar-pedido {
+  flex: 1;
   background: none;
   border: 1px solid #ccc;
   border-radius: 8px;
@@ -481,6 +477,23 @@ html, body {
   color: var(--verde-oscuro);
 }
 .btn-editar-pedido:hover { background: #f2f2f2; }
+.btn-flecha {
+  background: var(--verde);
+  color: var(--blanco);
+  border: none;
+  border-radius: 8px;
+  width: 40px;
+  height: 36px;
+  font-size: 1.1rem;
+  font-weight: 800;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+.btn-flecha:disabled {
+  background: #e0e0e0;
+  color: #aaa;
+  cursor: not-allowed;
+}
 .pedido-edit {
   margin-top: 10px;
   padding-top: 10px;
