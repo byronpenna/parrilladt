@@ -268,6 +268,9 @@ export default function TabletPage() {
           <Link href="/productos" className="btn btn-blanco">
             🍔 Productos
           </Link>
+          <Link href="/reportes" className="btn btn-blanco">
+            📈 Reportes
+          </Link>
           <div className="reloj">{reloj}</div>
         </div>
       </header>

@@ -35,6 +35,24 @@ export const QUERY_PEDIDOS = `
   }
 `;
 
+export const QUERY_PEDIDOS_REPORTE = `
+  query Pedidos($soloActivos: Boolean) {
+    pedidos(soloActivos: $soloActivos) {
+      id
+      clienteNombre
+      estado
+      total
+      createdAt
+      metodoPago
+      items {
+        itemNombre
+        cantidad
+        subtotal
+      }
+    }
+  }
+`;
+
 export const MUTATION_CREAR_PEDIDO = `
   mutation CrearPedido(
     $clienteNombre: String!

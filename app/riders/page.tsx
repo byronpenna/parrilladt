@@ -149,6 +149,9 @@ export default function RidersPage() {
           <Link href="/productos" className="btn btn-blanco">
             🍔 Productos
           </Link>
+          <Link href="/reportes" className="btn btn-blanco">
+            📈 Reportes
+          </Link>
           <div className="reloj">{ridersFiltrados.length} riders</div>
         </div>
       </header>
