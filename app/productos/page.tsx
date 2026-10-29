@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { Fragment, useEffect, useMemo, useState } from 'react';
+import LogoutButton from '@/components/LogoutButton';
 import { gqlRequest } from '@/lib/graphql-client';
 import {
   QUERY_MENU_ADMIN,
@@ -159,6 +160,7 @@ export default function ProductosPage() {
       <header className="cancha-header">
         <h1>🍔 Productos</h1>
         <div className="cancha-header-nav">
+          <LogoutButton />
           <Link href="/" className="btn btn-blanco">
             ⚽ Tomar pedidos
           </Link>
@@ -173,6 +175,9 @@ export default function ProductosPage() {
           </Link>
           <Link href="/reportes" className="btn btn-blanco">
             📈 Reportes
+          </Link>
+          <Link href="/configuracion" className="btn btn-blanco">
+            ⚙️ Config
           </Link>
           <div className="reloj">{productosFiltrados.length} productos</div>
         </div>

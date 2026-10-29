@@ -32,6 +32,24 @@ export const QUERY_PEDIDOS = `
       costoDelivery
       metodoPago
       horaEntrega
+      clienteLat
+      clienteLng
+      clienteDireccion
+      distanciaKm
+    }
+  }
+`;
+
+export const QUERY_CONFIG_NEGOCIO = `
+  query { configNegocio { latitud longitud direccion } }
+`;
+
+export const MUTATION_ACTUALIZAR_CONFIG_NEGOCIO = `
+  mutation ActualizarConfigNegocio($latitud: Float!, $longitud: Float!, $direccion: String) {
+    actualizarConfigNegocio(latitud: $latitud, longitud: $longitud, direccion: $direccion) {
+      latitud
+      longitud
+      direccion
     }
   }
 `;
@@ -62,6 +80,9 @@ export const MUTATION_CREAR_PEDIDO = `
     $costoDelivery: Float
     $metodoPago: MetodoPago
     $items: [ItemInput!]!
+    $clienteLat: Float
+    $clienteLng: Float
+    $clienteDireccion: String
   ) {
     crearPedido(
       clienteNombre: $clienteNombre
@@ -70,6 +91,9 @@ export const MUTATION_CREAR_PEDIDO = `
       costoDelivery: $costoDelivery
       metodoPago: $metodoPago
       items: $items
+      clienteLat: $clienteLat
+      clienteLng: $clienteLng
+      clienteDireccion: $clienteDireccion
     ) {
       id
     }

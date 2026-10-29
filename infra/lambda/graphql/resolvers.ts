@@ -24,6 +24,24 @@ interface PedidoRow {
   metodo_pago: string;
   hora_entrega: Date | null;
   historial: { estado: string; createdAt: string }[];
+  cliente_lat: number | string | null;
+  cliente_lng: number | string | null;
+  cliente_direccion: string | null;
+  distancia_km: string | null;
+}
+
+const RADIO_TIERRA_KM = 6371;
+
+// Distancia en línea recta (no la de ruta real), suficiente para un
+// estimado de "más o menos cuántos kilómetros son".
+function distanciaHaversineKm(lat1: number, lng1: number, lat2: number, lng2: number): number {
+  const rad = (deg: number) => (deg * Math.PI) / 180;
+  const dLat = rad(lat2 - lat1);
+  const dLng = rad(lng2 - lng1);
+  const a =
+    Math.sin(dLat / 2) ** 2 + Math.cos(rad(lat1)) * Math.cos(rad(lat2)) * Math.sin(dLng / 2) ** 2;
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return RADIO_TIERRA_KM * c;
 }
 
 function shapePedido(row: PedidoRow) {
@@ -53,12 +71,17 @@ function shapePedido(row: PedidoRow) {
       estado: h.estado,
       createdAt: new Date(h.createdAt).toISOString(),
     })),
+    clienteLat: row.cliente_lat !== null ? Number(row.cliente_lat) : null,
+    clienteLng: row.cliente_lng !== null ? Number(row.cliente_lng) : null,
+    clienteDireccion: row.cliente_direccion,
+    distanciaKm: row.distancia_km !== null ? Number(row.distancia_km) : null,
   };
 }
 
 const PEDIDO_SELECT = `
   SELECT p.id, p.cliente_nombre, p.nota, p.estado, p.total, p.created_at, p.updated_at,
     p.rider_id, r.nombre AS rider_nombre, p.costo_delivery, p.metodo_pago, p.hora_entrega,
+    p.cliente_lat, p.cliente_lng, p.cliente_direccion, p.distancia_km,
     (
       SELECT COALESCE(
         json_agg(json_build_object('estado', h.estado, 'createdAt', h.created_at) ORDER BY h.created_at),
@@ -135,6 +158,14 @@ export const rootValue = {
     return res.rows.map(shapeRider);
   },
 
+  configNegocio: async () => {
+    const pool = await getPool();
+    const res = await pool.query('SELECT latitud, longitud, direccion FROM config_negocio WHERE id = true');
+    if (res.rowCount === 0) return null;
+    const row = res.rows[0];
+    return { latitud: Number(row.latitud), longitud: Number(row.longitud), direccion: row.direccion };
+  },
+
   pedidos: async ({ soloActivos }: { soloActivos?: boolean }) => {
     const pool = await getPool();
     const res = await pool.query(
@@ -154,6 +185,9 @@ export const rootValue = {
     costoDelivery,
     metodoPago,
     items,
+    clienteLat,
+    clienteLng,
+    clienteDireccion,
   }: {
     clienteNombre: string;
     nota?: string;
@@ -161,16 +195,41 @@ export const rootValue = {
     costoDelivery?: number;
     metodoPago?: string;
     items: { menuItemId?: string; nombre: string; cantidad: number; precioUnitario: number }[];
+    clienteLat?: number;
+    clienteLng?: number;
+    clienteDireccion?: string;
   }) => {
     if (items.length === 0) throw new Error('El pedido necesita al menos un item');
     const pool = await getPool();
+
+    // distancia recalculada en el servidor (no se confía en la del cliente)
+    // contra la ubicación configurada del negocio, si ambas existen
+    let distanciaKm: number | null = null;
+    if (typeof clienteLat === 'number' && typeof clienteLng === 'number') {
+      const configRes = await pool.query('SELECT latitud, longitud FROM config_negocio WHERE id = true');
+      if (configRes.rowCount && configRes.rowCount > 0) {
+        const { latitud, longitud } = configRes.rows[0];
+        distanciaKm = distanciaHaversineKm(Number(latitud), Number(longitud), clienteLat, clienteLng);
+      }
+    }
+
     const client = await pool.connect();
     try {
       await client.query('BEGIN');
       const pedidoRes = await client.query(
-        `INSERT INTO pedidos (cliente_nombre, nota, rider_id, costo_delivery, metodo_pago)
-         VALUES ($1, $2, $3, $4, $5) RETURNING id`,
-        [clienteNombre, nota || null, riderId || null, costoDelivery || 0, metodoPago || 'efectivo']
+        `INSERT INTO pedidos (cliente_nombre, nota, rider_id, costo_delivery, metodo_pago, cliente_lat, cliente_lng, cliente_direccion, distancia_km)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING id`,
+        [
+          clienteNombre,
+          nota || null,
+          riderId || null,
+          costoDelivery || 0,
+          metodoPago || 'efectivo',
+          clienteLat ?? null,
+          clienteLng ?? null,
+          clienteDireccion || null,
+          distanciaKm,
+        ]
       );
       const pedidoId = pedidoRes.rows[0].id;
       await client.query(`INSERT INTO pedido_estado_historial (pedido_id, estado) VALUES ($1, 'pendiente')`, [
@@ -419,5 +478,30 @@ export const rootValue = {
     const pool = await getPool();
     const res = await pool.query('DELETE FROM riders WHERE id = $1', [id]);
     return (res.rowCount ?? 0) > 0;
+  },
+
+  actualizarConfigNegocio: async ({
+    latitud,
+    longitud,
+    direccion,
+  }: {
+    latitud: number;
+    longitud: number;
+    direccion?: string;
+  }) => {
+    const pool = await getPool();
+    const res = await pool.query(
+      `INSERT INTO config_negocio (id, latitud, longitud, direccion)
+       VALUES (true, $1, $2, $3)
+       ON CONFLICT (id) DO UPDATE SET
+         latitud = EXCLUDED.latitud,
+         longitud = EXCLUDED.longitud,
+         direccion = EXCLUDED.direccion,
+         updated_at = now()
+       RETURNING latitud, longitud, direccion`,
+      [latitud, longitud, direccion || null]
+    );
+    const row = res.rows[0];
+    return { latitud: Number(row.latitud), longitud: Number(row.longitud), direccion: row.direccion };
   },
 };

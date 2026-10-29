@@ -1,10 +1,19 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import LogoutButton from '@/components/LogoutButton';
+import MapaUbicacion from '@/components/MapaUbicacion';
 import { gqlRequest } from '@/lib/graphql-client';
-import { QUERY_MENU, QUERY_CLIENTES, QUERY_RIDERS, MUTATION_CREAR_PEDIDO, MUTATION_AGREGAR_CLIENTE } from '@/lib/queries';
-import type { MenuItem, Cliente, Rider, MetodoPago } from '@/lib/types';
+import {
+  QUERY_MENU,
+  QUERY_CLIENTES,
+  QUERY_RIDERS,
+  QUERY_CONFIG_NEGOCIO,
+  MUTATION_CREAR_PEDIDO,
+  MUTATION_AGREGAR_CLIENTE,
+} from '@/lib/queries';
+import type { MenuItem, Cliente, Rider, MetodoPago, ConfigNegocio } from '@/lib/types';
 
 const CLAVE_MENU = 'cancha_menu_cache';
 const CLAVE_CLIENTES = 'cancha_clientes_cache';
@@ -31,6 +40,9 @@ interface PedidoPendiente {
   costoDelivery: number;
   metodoPago: MetodoPago;
   items: { menuItemId: string; nombre: string; cantidad: number; precioUnitario: number }[];
+  clienteLat: number | null;
+  clienteLng: number | null;
+  clienteDireccion: string;
 }
 
 interface PedidoProgramado extends PedidoPendiente {
@@ -73,6 +85,10 @@ export default function TabletPage() {
   const [nota, setNota] = useState('');
   const [riderId, setRiderId] = useState('');
   const [costoDelivery, setCostoDelivery] = useState(COSTO_DELIVERY_MIN);
+  const [configNegocio, setConfigNegocio] = useState<ConfigNegocio | null>(null);
+  const [clienteLat, setClienteLat] = useState<number | null>(null);
+  const [clienteLng, setClienteLng] = useState<number | null>(null);
+  const [clienteDireccion, setClienteDireccion] = useState('');
   const [metodoPago, setMetodoPago] = useState<MetodoPago>('efectivo');
   const [pagaCon, setPagaCon] = useState('');
   const [modoEnvio, setModoEnvio] = useState<'inmediato' | 'programado'>('inmediato');
@@ -97,6 +113,7 @@ export default function TabletPage() {
     cargarMenu();
     cargarClientes();
     cargarRiders();
+    cargarConfigNegocio();
     setProgramados(leerProgramados());
     const id = setInterval(() => {
       reintentarPendientes();
@@ -145,9 +162,29 @@ export default function TabletPage() {
     }
   }
 
+  async function cargarConfigNegocio() {
+    try {
+      const data = await gqlRequest<{ configNegocio: ConfigNegocio | null }>(QUERY_CONFIG_NEGOCIO);
+      setConfigNegocio(data.configNegocio);
+    } catch {
+      // sin ubicación del negocio simplemente no se muestra la distancia
+    }
+  }
+
   function cambiarRider(valor: string) {
     setRiderId(valor);
-    if (!valor) setCostoDelivery(COSTO_DELIVERY_MIN);
+    if (!valor) {
+      setCostoDelivery(COSTO_DELIVERY_MIN);
+      setClienteLat(null);
+      setClienteLng(null);
+      setClienteDireccion('');
+    }
+  }
+
+  function cambiarUbicacionCliente(lat: number, lng: number, direccion: string | null) {
+    setClienteLat(lat);
+    setClienteLng(lng);
+    if (direccion) setClienteDireccion(direccion);
   }
 
   function subirCostoDelivery() {
@@ -264,6 +301,9 @@ export default function TabletPage() {
     setPagaCon('');
     setModoEnvio('inmediato');
     setHoraProgramada('');
+    setClienteLat(null);
+    setClienteLng(null);
+    setClienteDireccion('');
   }
 
   async function enviarPedido() {
@@ -291,6 +331,9 @@ export default function TabletPage() {
       costoDelivery: riderId ? costoDelivery : 0,
       metodoPago,
       items,
+      clienteLat: riderId ? clienteLat : null,
+      clienteLng: riderId ? clienteLng : null,
+      clienteDireccion: riderId ? clienteDireccion.trim() : '',
     };
 
     if (modoEnvio === 'programado') {
@@ -334,6 +377,10 @@ export default function TabletPage() {
   );
   const subtotalItems = [...carrito.values()].reduce((s, it) => s + it.cantidad * it.precio, 0);
   const total = subtotalItems + (riderId ? costoDelivery : 0);
+  const referenciaNegocio = useMemo(
+    () => (configNegocio ? { lat: configNegocio.latitud, lng: configNegocio.longitud, etiqueta: 'Negocio' } : null),
+    [configNegocio]
+  );
   const pagaConNum = parseFloat(pagaCon);
   const tieneMontoPago = pagaCon.trim() !== '' && !Number.isNaN(pagaConNum);
   const vuelto = tieneMontoPago ? pagaConNum - total : 0;
@@ -343,6 +390,7 @@ export default function TabletPage() {
       <header className="cancha-header">
         <h1>⚽ Toma de Pedidos</h1>
         <div className="cancha-header-nav">
+          <LogoutButton />
           <Link href="/pedidos" className="btn btn-blanco">
             📋 Pedidos
           </Link>
@@ -354,6 +402,9 @@ export default function TabletPage() {
           </Link>
           <Link href="/reportes" className="btn btn-blanco">
             📈 Reportes
+          </Link>
+          <Link href="/configuracion" className="btn btn-blanco">
+            ⚙️ Config
           </Link>
           <div className="reloj">{reloj}</div>
         </div>
@@ -510,6 +561,24 @@ export default function TabletPage() {
                   +
                 </button>
               </div>
+            </div>
+          )}
+          {riderId && (
+            <div className="delivery-box">
+              <label>Ubicación de entrega</label>
+              {!configNegocio && (
+                <div style={{ fontSize: '0.8rem', color: '#8a5a1f' }}>
+                  Configura la ubicación del negocio en ⚙️ Config para calcular la distancia.
+                </div>
+              )}
+              <MapaUbicacion
+                lat={clienteLat}
+                lng={clienteLng}
+                onChange={cambiarUbicacionCliente}
+                referencia={referenciaNegocio}
+                alto={220}
+              />
+              {clienteDireccion && <div style={{ fontSize: '0.85rem', color: '#666' }}>{clienteDireccion}</div>}
             </div>
           )}
           {riderId && <div className="subtotal-linea">Subtotal: ${subtotalItems.toFixed(2)}</div>}

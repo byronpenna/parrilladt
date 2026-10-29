@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
 import writeXlsxFile from 'write-excel-file';
+import LogoutButton from '@/components/LogoutButton';
 import { gqlRequest } from '@/lib/graphql-client';
 import { QUERY_PEDIDOS } from '@/lib/queries';
 import type { Pedido, EstadoPedido, MetodoPago } from '@/lib/types';
@@ -141,6 +142,7 @@ export default function PedidosPage() {
       <header className="cancha-header">
         <h1>📋 Pedidos</h1>
         <div className="cancha-header-nav">
+          <LogoutButton />
           <Link href="/" className="btn btn-blanco">
             ⚽ Tomar pedidos
           </Link>
@@ -155,6 +157,9 @@ export default function PedidosPage() {
           </Link>
           <Link href="/reportes" className="btn btn-blanco">
             📈 Reportes
+          </Link>
+          <Link href="/configuracion" className="btn btn-blanco">
+            ⚙️ Config
           </Link>
           <div className="reloj">{pedidosFiltrados.length} pedidos</div>
         </div>
@@ -269,6 +274,7 @@ export default function PedidosPage() {
                   <th>Estado</th>
                   <th>Rider</th>
                   <th>Delivery</th>
+                  <th>Distancia</th>
                   <th>Pago</th>
                   <th>Total</th>
                 </tr>
@@ -285,6 +291,21 @@ export default function PedidosPage() {
                     </td>
                     <td>{p.riderNombre || '—'}</td>
                     <td className="col-monto">{p.riderNombre ? `$${p.costoDelivery.toFixed(2)}` : '—'}</td>
+                    <td>
+                      {p.distanciaKm !== null ? `~${p.distanciaKm.toFixed(1)} km` : '—'}
+                      {p.clienteLat !== null && p.clienteLng !== null && (
+                        <>
+                          {' '}
+                          <a
+                            href={`https://www.google.com/maps/search/?api=1&query=${p.clienteLat},${p.clienteLng}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                          >
+                            🗺️
+                          </a>
+                        </>
+                      )}
+                    </td>
                     <td>{METODO_PAGO_LABEL[p.metodoPago]}</td>
                     <td className="col-monto">${p.total.toFixed(2)}</td>
                   </tr>
@@ -292,7 +313,7 @@ export default function PedidosPage() {
               </tbody>
               <tfoot>
                 <tr>
-                  <td colSpan={7}>Total mostrado</td>
+                  <td colSpan={8}>Total mostrado</td>
                   <td className="col-monto">${totalMostrado.toFixed(2)}</td>
                 </tr>
               </tfoot>

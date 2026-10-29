@@ -9,13 +9,16 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@aws-sdk/client-cognito-identity-provider": "^3.1159.0",
     "@aws-sdk/client-lambda": "^3.600.0",
+    "aws-jwt-verify": "^5.2.1",
     "next": "^16.3.6",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "write-excel-file": "^2.3.0"
   },
   "devDependencies": {
+    "@types/google.maps": "^3.66.9",
     "@types/node": "^20.14.0",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",

@@ -51,4 +51,14 @@ export interface Pedido {
   metodoPago: MetodoPago;
   horaEntrega: string | null;
   historialEstados: PedidoEstadoEvento[];
+  clienteLat: number | null;
+  clienteLng: number | null;
+  clienteDireccion: string | null;
+  distanciaKm: number | null;
+}
+
+export interface ConfigNegocio {
+  latitud: number;
+  longitud: number;
+  direccion: string | null;
 }

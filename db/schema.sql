@@ -75,9 +75,27 @@ END $$;
 ALTER TABLE pedidos ADD COLUMN IF NOT EXISTS metodo_pago metodo_pago NOT NULL DEFAULT 'efectivo';
 ALTER TABLE pedidos ADD COLUMN IF NOT EXISTS hora_entrega TIMESTAMPTZ;
 
+-- ubicación de entrega (Google Maps) y distancia aprox. calculada contra
+-- config_negocio al momento de crear el pedido
+ALTER TABLE pedidos ADD COLUMN IF NOT EXISTS cliente_lat DOUBLE PRECISION;
+ALTER TABLE pedidos ADD COLUMN IF NOT EXISTS cliente_lng DOUBLE PRECISION;
+ALTER TABLE pedidos ADD COLUMN IF NOT EXISTS cliente_direccion TEXT;
+ALTER TABLE pedidos ADD COLUMN IF NOT EXISTS distancia_km NUMERIC(6,2);
+
 CREATE INDEX IF NOT EXISTS pedidos_estado_idx ON pedidos (estado) WHERE estado <> 'entregado';
 CREATE INDEX IF NOT EXISTS pedidos_created_at_idx ON pedidos (created_at);
 CREATE INDEX IF NOT EXISTS pedidos_rider_id_idx ON pedidos (rider_id);
+
+-- ── Configuración del negocio ──────────────────────────────────────────
+-- Fila única (id siempre true) con la ubicación del local, usada para
+-- calcular la distancia aproximada de cada pedido con envío.
+CREATE TABLE IF NOT EXISTS config_negocio (
+    id          BOOLEAN PRIMARY KEY DEFAULT true CHECK (id),
+    latitud     DOUBLE PRECISION NOT NULL,
+    longitud    DOUBLE PRECISION NOT NULL,
+    direccion   TEXT,
+    updated_at  TIMESTAMPTZ NOT NULL DEFAULT now()
+);
 
 -- ── Items de cada pedido ────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS pedido_items (

@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
+import LogoutButton from '@/components/LogoutButton';
 import { gqlRequest } from '@/lib/graphql-client';
 import { QUERY_PEDIDOS_REPORTE } from '@/lib/queries';
 import type { Pedido, MetodoPago } from '@/lib/types';
@@ -261,6 +262,7 @@ export default function ReportesPage() {
       <header className="cancha-header">
         <h1>📈 Reportería</h1>
         <div className="cancha-header-nav">
+          <LogoutButton />
           <Link href="/" className="btn btn-blanco">
             ⚽ Tomar pedidos
           </Link>
@@ -272,6 +274,9 @@ export default function ReportesPage() {
           </Link>
           <Link href="/clientes" className="btn btn-blanco">
             👤 Clientes
+          </Link>
+          <Link href="/configuracion" className="btn btn-blanco">
+            ⚙️ Config
           </Link>
         </div>
       </header>

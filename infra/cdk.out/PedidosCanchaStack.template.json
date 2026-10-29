@@ -156,7 +156,7 @@
    "Properties": {
     "Code": {
      "S3Bucket": "cdk-hnb659fds-assets-861418247819-us-east-1",
-     "S3Key": "3a8505b7abfc82357efe37cd1033e9a95efd810cdc920798e0432a23e0d2d838.zip"
+     "S3Key": "a46f4351fb474bfa06e6729a969151881b006f7dc8d34f2a746ce20003c7e25e.zip"
     },
     "Environment": {
      "Variables": {
@@ -202,7 +202,7 @@
    ],
    "Metadata": {
     "aws:cdk:path": "PedidosCanchaStack/MigrateFn/Resource",
-    "aws:asset:path": "asset.3a8505b7abfc82357efe37cd1033e9a95efd810cdc920798e0432a23e0d2d838",
+    "aws:asset:path": "asset.a46f4351fb474bfa06e6729a969151881b006f7dc8d34f2a746ce20003c7e25e",
     "aws:asset:is-bundled": true,
     "aws:asset:property": "Code"
    }
@@ -287,7 +287,7 @@
    "Properties": {
     "Code": {
      "S3Bucket": "cdk-hnb659fds-assets-861418247819-us-east-1",
-     "S3Key": "1c6062aa0d875fa47a9d032000a75dc619df0f6cd3adba5f53caa3f8da662f82.zip"
+     "S3Key": "0870d210837627ea1600494ecea064553b7e141b8423c47dbb3b7b5770d225be.zip"
     },
     "Environment": {
      "Variables": {
@@ -332,7 +332,7 @@
    ],
    "Metadata": {
     "aws:cdk:path": "PedidosCanchaStack/GraphqlFn/Resource",
-    "aws:asset:path": "asset.1c6062aa0d875fa47a9d032000a75dc619df0f6cd3adba5f53caa3f8da662f82",
+    "aws:asset:path": "asset.0870d210837627ea1600494ecea064553b7e141b8423c47dbb3b7b5770d225be",
     "aws:asset:is-bundled": true,
     "aws:asset:property": "Code"
    }
@@ -402,6 +402,102 @@
    },
    "Metadata": {
     "aws:cdk:path": "PedidosCanchaStack/AmplifySsrComputeRole/DefaultPolicy/Resource"
+   }
+  },
+  "UserPool6BA7E5F2": {
+   "Type": "AWS::Cognito::UserPool",
+   "Properties": {
+    "AccountRecoverySetting": {
+     "RecoveryMechanisms": [
+      {
+       "Name": "verified_email",
+       "Priority": 1
+      }
+     ]
+    },
+    "AdminCreateUserConfig": {
+     "AllowAdminCreateUserOnly": true
+    },
+    "AliasAttributes": [
+     "email"
+    ],
+    "AutoVerifiedAttributes": [
+     "email"
+    ],
+    "EmailVerificationMessage": "The verification code to your new account is {####}",
+    "EmailVerificationSubject": "Verify your new account",
+    "Policies": {
+     "PasswordPolicy": {
+      "MinimumLength": 8,
+      "RequireLowercase": true,
+      "RequireNumbers": true,
+      "RequireSymbols": true,
+      "RequireUppercase": true
+     }
+    },
+    "Schema": [
+     {
+      "Mutable": true,
+      "Name": "email",
+      "Required": true
+     }
+    ],
+    "SmsVerificationMessage": "The verification code to your new account is {####}",
+    "UserPoolName": "pedidos-cancha-usuarios",
+    "VerificationMessageTemplate": {
+     "DefaultEmailOption": "CONFIRM_WITH_CODE",
+     "EmailMessage": "The verification code to your new account is {####}",
+     "EmailSubject": "Verify your new account",
+     "SmsMessage": "The verification code to your new account is {####}"
+    }
+   },
+   "UpdateReplacePolicy": "Retain",
+   "DeletionPolicy": "Retain",
+   "Metadata": {
+    "aws:cdk:path": "PedidosCanchaStack/UserPool/Resource"
+   }
+  },
+  "UserPoolClient2F5918F7": {
+   "Type": "AWS::Cognito::UserPoolClient",
+   "Properties": {
+    "AccessTokenValidity": 720,
+    "AllowedOAuthFlows": [
+     "implicit",
+     "code"
+    ],
+    "AllowedOAuthFlowsUserPoolClient": true,
+    "AllowedOAuthScopes": [
+     "profile",
+     "phone",
+     "email",
+     "openid",
+     "aws.cognito.signin.user.admin"
+    ],
+    "CallbackURLs": [
+     "https://example.com"
+    ],
+    "ClientName": "pedidos-cancha-web",
+    "ExplicitAuthFlows": [
+     "ALLOW_USER_PASSWORD_AUTH",
+     "ALLOW_REFRESH_TOKEN_AUTH"
+    ],
+    "GenerateSecret": false,
+    "IdTokenValidity": 720,
+    "RefreshTokenValidity": 43200,
+    "SupportedIdentityProviders": [
+     "COGNITO"
+    ],
+    "TokenValidityUnits": {
+     "AccessToken": "minutes",
+     "IdToken": "minutes",
+     "RefreshToken": "minutes"
+    },
+    "UserPoolId": {
+     "Ref": "UserPool6BA7E5F2"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "PedidosCanchaStack/UserPoolClient/Resource"
    }
   },
   "VpnServerSg7EAEB16C": {
@@ -559,7 +655,7 @@
   "CDKMetadata": {
    "Type": "AWS::CDK::Metadata",
    "Properties": {
-    "Analytics": "v2:deflate64:H4sIAAAAAAAA/11Oy07DQAz8lt5dE9IDXGklql6gSj4gcjdOtHnsVmsvVRXl39GGRghOM2OPZ5xj/pJhtqGbbE3dbwd7walUMj0ULD4Gw0A3qSY2OU6HxpVsYrB6PwYfryfXBhaBP0P474KTEyVnOG1WPoOwCawykqOWA07loh/XgXWGgcZLTZXzNXeCHwu8R2fUegeWRpwKPyypC579YM09yV+21p2Db+yQWncVibAKviUA2eE+mp51T8KPRjw0bu2ZYfGVSq11bYr8jHqNOkN6Czt5+spzfH7FbNOJtdsQndqRsfjBb3A5FjFgAQAA"
+    "Analytics": "v2:deflate64:H4sIAAAAAAAA/12Py27CMBBFv4W9maZh0W5LpFZsWkTUdWScSWRwxsgzLkJW/r1yIPSxunde92hKKJ8KKBb6zEvTHpfO7iHVos1R7ZB9DAaVPnOT0JSQqo5qNDFYubwFH08b6gMyqz9N9X9LbYhFk8E8mf2oGE1A4UGT7jFAqqf6dh1QRuX0sG91Q77FA8P7JK+RjFhPyuoB0s67KXXSrXfWXHL542bcNvjOukxdNZoZheEli+IVrKM5oqw1440IVUd3jvE9WfGQPhnD1nuXY+9+NpWzSPJ7dO2Mo5o4tejeUp8XPqKcoowqvwUHfvgqS3h8hmJxYGuXIZLYAWF31W9pjTnMoAEAAA=="
    },
    "Metadata": {
     "aws:cdk:path": "PedidosCanchaStack/CDKMetadata/Default"
@@ -567,6 +663,16 @@
   }
  },
  "Outputs": {
+  "UserPoolId": {
+   "Value": {
+    "Ref": "UserPool6BA7E5F2"
+   }
+  },
+  "UserPoolClientId": {
+   "Value": {
+    "Ref": "UserPoolClient2F5918F7"
+   }
+  },
   "MigrateFunctionName": {
    "Value": {
     "Ref": "MigrateFnD91AE9F5"

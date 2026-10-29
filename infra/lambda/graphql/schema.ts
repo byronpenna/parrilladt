@@ -64,6 +64,16 @@ export const schema = buildSchema(`
     metodoPago: MetodoPago!
     horaEntrega: String
     historialEstados: [PedidoEstadoEvento!]!
+    clienteLat: Float
+    clienteLng: Float
+    clienteDireccion: String
+    distanciaKm: Float
+  }
+
+  type ConfigNegocio {
+    latitud: Float!
+    longitud: Float!
+    direccion: String
   }
 
   type Query {
@@ -73,6 +83,7 @@ export const schema = buildSchema(`
     riders: [Rider!]!
     ridersAdmin: [Rider!]!
     pedidos(soloActivos: Boolean): [Pedido!]!
+    configNegocio: ConfigNegocio
   }
 
   input ItemInput {
@@ -96,9 +107,13 @@ export const schema = buildSchema(`
       costoDelivery: Float
       metodoPago: MetodoPago
       items: [ItemInput!]!
+      clienteLat: Float
+      clienteLng: Float
+      clienteDireccion: String
     ): Pedido!
     actualizarEstado(id: ID!, estado: EstadoPedido!): Pedido!
     actualizarPedido(id: ID!, riderId: ID, metodoPago: MetodoPago, horaEntrega: String): Pedido!
+    actualizarConfigNegocio(latitud: Float!, longitud: Float!, direccion: String): ConfigNegocio!
     agregarCliente(nombre: String!, telefono: String): Cliente!
     actualizarCliente(id: ID!, nombre: String, telefono: String): Cliente!
     eliminarCliente(id: ID!): Boolean!

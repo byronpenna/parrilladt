@@ -51,9 +51,12 @@ html, body {
   border: 6px solid var(--blanco);
   border-radius: 50%;
   background: var(--verde-oscuro);
+  z-index: 0;
 }
 
 .cancha-header h1 {
+  position: relative;
+  z-index: 1;
   margin: 0;
   font-size: 1.6rem;
   letter-spacing: 0.5px;
@@ -68,6 +71,8 @@ html, body {
 }
 
 .cancha-header-nav {
+  position: relative;
+  z-index: 1;
   display: flex;
   gap: 12px;
   align-items: center;
@@ -282,6 +287,31 @@ html, body {
   z-index: 50;
 }
 #toast.mostrar { opacity: 1; }
+
+/* ── Mapa de ubicación (Google Maps) ─────────────────────────────── */
+.mapa-ubicacion { display: flex; flex-direction: column; gap: 8px; }
+.mapa-ubicacion-barra { display: flex; gap: 8px; }
+.mapa-ubicacion-autocomplete {
+  flex: 1; display: flex; align-items: stretch; border-radius: 10px; border: 2px solid var(--verde-claro);
+  position: relative; z-index: 2;
+}
+.mapa-ubicacion-contenedor {
+  border-radius: 10px; border: 2px solid var(--verde-claro); overflow: hidden;
+}
+.mapa-ubicacion-cargando {
+  position: relative; height: 100%; display: flex; align-items: center; justify-content: center;
+}
+.mapa-ubicacion-distancia {
+  font-size: 0.95rem; font-weight: 700; color: var(--naranja-oscuro); text-align: center;
+}
+.mapa-ubicacion-error {
+  background: #fdf2e9; border-radius: 10px; padding: 12px; display: flex; flex-direction: column; gap: 8px;
+  color: #8a5a1f; font-size: 0.9rem;
+}
+.mapa-ubicacion-manual { display: flex; gap: 8px; flex-wrap: wrap; }
+.mapa-ubicacion-manual input {
+  flex: 1; min-width: 120px; padding: 8px 10px; border-radius: 8px; border: 2px solid var(--verde-claro);
+}
 
 /* ── Pedidos (tabla con filtros) ──────────────────────────────────── */
 .pedidos-page {
@@ -709,6 +739,49 @@ html, body {
   font-weight: 500;
   color: #999;
 }
+/* ── Login ────────────────────────────────────────────────────────── */
+.login-page {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+.login-card {
+  width: 100%;
+  max-width: 360px;
+  padding: 32px 28px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.login-logo {
+  text-align: center;
+  font-size: 1.8rem;
+  font-weight: 800;
+  color: var(--verde-oscuro);
+}
+.login-subtitulo {
+  text-align: center;
+  color: #777;
+  font-size: 0.9rem;
+  margin-top: -10px;
+}
+.login-card input {
+  width: 100%;
+}
+.login-card .btn {
+  margin-top: 4px;
+  font-size: 1.05rem;
+  padding: 14px;
+}
+.login-error {
+  color: #b30000;
+  font-weight: 700;
+  font-size: 0.9rem;
+  text-align: center;
+}
+
 #estadoConexion {
   font-size: 0.95rem;
   padding: 5px 12px;
@@ -732,7 +805,6 @@ html, body {
     row-gap: 10px;
   }
   .cancha-header h1 { font-size: 1.3rem; }
-  .cancha-header::after { display: none; }
   .cancha-header-nav { justify-content: flex-start; width: 100%; }
   .cancha-header-nav .btn { padding: 8px 12px; font-size: 0.85rem; }
   .cancha-header .reloj { font-size: 1rem; padding: 5px 10px; }

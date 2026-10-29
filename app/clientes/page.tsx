@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { Fragment, useEffect, useMemo, useState } from 'react';
+import LogoutButton from '@/components/LogoutButton';
 import { gqlRequest } from '@/lib/graphql-client';
 import {
   QUERY_CLIENTES,
@@ -128,6 +129,7 @@ export default function ClientesPage() {
       <header className="cancha-header">
         <h1>👤 Clientes</h1>
         <div className="cancha-header-nav">
+          <LogoutButton />
           <Link href="/" className="btn btn-blanco">
             ⚽ Tomar pedidos
           </Link>
@@ -142,6 +144,9 @@ export default function ClientesPage() {
           </Link>
           <Link href="/reportes" className="btn btn-blanco">
             📈 Reportes
+          </Link>
+          <Link href="/configuracion" className="btn btn-blanco">
+            ⚙️ Config
           </Link>
           <div className="reloj">{clientesFiltrados.length} clientes</div>
         </div>

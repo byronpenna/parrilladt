@@ -1,4 +1,5 @@
 import * as cdk from 'aws-cdk-lib';
+import * as cognito from 'aws-cdk-lib/aws-cognito';
 import * as ec2 from 'aws-cdk-lib/aws-ec2';
 import * as iam from 'aws-cdk-lib/aws-iam';
 import * as rds from 'aws-cdk-lib/aws-rds';
@@ -140,6 +141,44 @@ export class PedidosCanchaStack extends cdk.Stack {
       description: 'Compute role del SSR de Next.js en Amplify Hosting para invocar el Lambda GraphQL',
     });
     graphqlFn.grantInvoke(amplifySsrRole);
+
+    // ── Cognito: login de la app. Todas las páginas y /api/graphql exigen
+    // una sesión; la sesión se arma a partir del IdToken que devuelve
+    // InitiateAuth (USER_PASSWORD_AUTH), llamado desde el backend de
+    // Next.js (nunca directo desde el navegador). Se usa InitiateAuth y no
+    // AdminInitiateAuth a propósito: la variante "admin" exige permiso IAM
+    // (cognito-idp:AdminInitiateAuth) sobre el pool, que ni el perfil local
+    // "aula" ni el rol de Amplify tienen por defecto; InitiateAuth no
+    // requiere credenciales AWS, solo el ClientId (sin secreto), que es
+    // exactamente el límite de confianza que ya existe aquí.
+    const userPool = new cognito.UserPool(this, 'UserPool', {
+      userPoolName: 'pedidos-cancha-usuarios',
+      selfSignUpEnabled: false,
+      signInAliases: { username: true, email: true },
+      standardAttributes: { email: { required: true, mutable: true } },
+      passwordPolicy: {
+        minLength: 8,
+        requireLowercase: true,
+        requireUppercase: true,
+        requireDigits: true,
+        requireSymbols: true,
+      },
+      accountRecovery: cognito.AccountRecovery.EMAIL_ONLY,
+      removalPolicy: cdk.RemovalPolicy.RETAIN,
+    });
+
+    const userPoolClient = new cognito.UserPoolClient(this, 'UserPoolClient', {
+      userPool,
+      userPoolClientName: 'pedidos-cancha-web',
+      generateSecret: false,
+      authFlows: { userPassword: true },
+      idTokenValidity: cdk.Duration.hours(12),
+      accessTokenValidity: cdk.Duration.hours(12),
+      refreshTokenValidity: cdk.Duration.days(30),
+    });
+
+    new cdk.CfnOutput(this, 'UserPoolId', { value: userPool.userPoolId });
+    new cdk.CfnOutput(this, 'UserPoolClientId', { value: userPoolClient.userPoolClientId });
 
     new cdk.CfnOutput(this, 'MigrateFunctionName', { value: migrateFn.functionName });
     new cdk.CfnOutput(this, 'GraphqlFunctionName', { value: graphqlFn.functionName });

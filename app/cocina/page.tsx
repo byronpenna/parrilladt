@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState, type MouseEvent } from 'react';
+import LogoutButton from '@/components/LogoutButton';
 import { gqlRequest } from '@/lib/graphql-client';
 import { QUERY_PEDIDOS, QUERY_RIDERS, MUTATION_ACTUALIZAR_ESTADO, MUTATION_ACTUALIZAR_PEDIDO } from '@/lib/queries';
 import type { Pedido, EstadoPedido, MetodoPago, Rider } from '@/lib/types';
@@ -171,6 +172,7 @@ export default function CocinaPage() {
       <header className="cancha-header">
         <h1>🍽 Cocina en vivo</h1>
         <div className="cancha-header-nav">
+          <LogoutButton />
           <div id="estadoConexion" style={{ color: estadoConexion.ok ? 'var(--verde-oscuro)' : '#c0392b' }}>
             {estadoConexion.texto}
           </div>
@@ -207,6 +209,20 @@ export default function CocinaPage() {
                         </span>
                         {p.horaEntrega && (
                           <span className="pedido-meta-chip">🕒 {formatoHoraEntrega(p.horaEntrega)}</span>
+                        )}
+                        {p.distanciaKm !== null && (
+                          <span className="pedido-meta-chip">📏 ~{p.distanciaKm.toFixed(1)} km</span>
+                        )}
+                        {p.clienteLat !== null && p.clienteLng !== null && (
+                          <a
+                            className="pedido-meta-chip"
+                            href={`https://www.google.com/maps/search/?api=1&query=${p.clienteLat},${p.clienteLng}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            🗺️ Ver ubicación
+                          </a>
                         )}
                       </div>
 
