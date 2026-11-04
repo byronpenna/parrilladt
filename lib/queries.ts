@@ -210,3 +210,45 @@ export const MUTATION_ELIMINAR_RIDER = `
     eliminarRider(id: $id)
   }
 `;
+
+export const QUERY_INSUMOS = `
+  query { insumos { id nombre unidad stockActual stockMinimo stockIdeal activo bajoMinimo } }
+`;
+
+export const MUTATION_CREAR_INSUMO = `
+  mutation CrearInsumo($nombre: String!, $unidad: String!, $stockActual: Float, $stockMinimo: Float, $stockIdeal: Float) {
+    crearInsumo(nombre: $nombre, unidad: $unidad, stockActual: $stockActual, stockMinimo: $stockMinimo, stockIdeal: $stockIdeal) {
+      id nombre unidad stockActual stockMinimo stockIdeal activo bajoMinimo
+    }
+  }
+`;
+
+export const MUTATION_ACTUALIZAR_INSUMO = `
+  mutation ActualizarInsumo(
+    $id: ID!
+    $nombre: String
+    $unidad: String
+    $stockActual: Float
+    $stockMinimo: Float
+    $stockIdeal: Float
+    $activo: Boolean
+  ) {
+    actualizarInsumo(
+      id: $id
+      nombre: $nombre
+      unidad: $unidad
+      stockActual: $stockActual
+      stockMinimo: $stockMinimo
+      stockIdeal: $stockIdeal
+      activo: $activo
+    ) {
+      id nombre unidad stockActual stockMinimo stockIdeal activo bajoMinimo
+    }
+  }
+`;
+
+export const MUTATION_ELIMINAR_INSUMO = `
+  mutation EliminarInsumo($id: ID!) {
+    eliminarInsumo(id: $id)
+  }
+`;

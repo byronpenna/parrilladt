@@ -62,3 +62,14 @@ export interface ConfigNegocio {
   longitud: number;
   direccion: string | null;
 }
+
+export interface Insumo {
+  id: string;
+  nombre: string;
+  unidad: string;
+  stockActual: number;
+  stockMinimo: number;
+  stockIdeal: number;
+  activo: boolean;
+  bajoMinimo: boolean;
+}

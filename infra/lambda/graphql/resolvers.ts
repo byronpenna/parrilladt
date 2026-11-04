@@ -123,6 +123,29 @@ function shapeRider(r: { id: string; nombre: string; telefono: string | null; ac
   return { id: r.id, nombre: r.nombre, telefono: r.telefono, activo: r.activo };
 }
 
+function shapeInsumo(r: {
+  id: string;
+  nombre: string;
+  unidad: string;
+  stock_actual: string | number;
+  stock_minimo: string | number;
+  stock_ideal: string | number;
+  activo: boolean;
+}) {
+  const stockActual = Number(r.stock_actual);
+  const stockMinimo = Number(r.stock_minimo);
+  return {
+    id: r.id,
+    nombre: r.nombre,
+    unidad: r.unidad,
+    stockActual,
+    stockMinimo,
+    stockIdeal: Number(r.stock_ideal),
+    activo: r.activo,
+    bajoMinimo: stockActual < stockMinimo,
+  };
+}
+
 export const rootValue = {
   menu: async () => {
     const pool = await getPool();
@@ -156,6 +179,14 @@ export const rootValue = {
     const pool = await getPool();
     const res = await pool.query('SELECT id, nombre, telefono, activo FROM riders ORDER BY nombre');
     return res.rows.map(shapeRider);
+  },
+
+  insumos: async () => {
+    const pool = await getPool();
+    const res = await pool.query(
+      'SELECT id, nombre, unidad, stock_actual, stock_minimo, stock_ideal, activo FROM insumos ORDER BY nombre'
+    );
+    return res.rows.map(shapeInsumo);
   },
 
   configNegocio: async () => {
@@ -511,6 +542,84 @@ export const rootValue = {
   eliminarRider: async ({ id }: { id: string }) => {
     const pool = await getPool();
     const res = await pool.query('DELETE FROM riders WHERE id = $1', [id]);
+    return (res.rowCount ?? 0) > 0;
+  },
+
+  crearInsumo: async ({
+    nombre,
+    unidad,
+    stockActual,
+    stockMinimo,
+    stockIdeal,
+  }: {
+    nombre: string;
+    unidad: string;
+    stockActual?: number;
+    stockMinimo?: number;
+    stockIdeal?: number;
+  }) => {
+    const pool = await getPool();
+    try {
+      const res = await pool.query(
+        `INSERT INTO insumos (nombre, unidad, stock_actual, stock_minimo, stock_ideal)
+         VALUES ($1, $2, $3, $4, $5)
+         RETURNING id, nombre, unidad, stock_actual, stock_minimo, stock_ideal, activo`,
+        [nombre.trim(), unidad.trim(), stockActual ?? 0, stockMinimo ?? 0, stockIdeal ?? 0]
+      );
+      return shapeInsumo(res.rows[0]);
+    } catch (err: unknown) {
+      if (err && typeof err === 'object' && 'code' in err && (err as { code: string }).code === '23505') {
+        throw new Error(`Ya existe un insumo llamado "${nombre.trim()}"`);
+      }
+      throw err;
+    }
+  },
+
+  actualizarInsumo: async ({
+    id,
+    nombre,
+    unidad,
+    stockActual,
+    stockMinimo,
+    stockIdeal,
+    activo,
+  }: {
+    id: string;
+    nombre?: string;
+    unidad?: string;
+    stockActual?: number;
+    stockMinimo?: number;
+    stockIdeal?: number;
+    activo?: boolean;
+  }) => {
+    const pool = await getPool();
+    const res = await pool.query(
+      `UPDATE insumos SET
+         nombre = COALESCE($2, nombre),
+         unidad = COALESCE($3, unidad),
+         stock_actual = COALESCE($4, stock_actual),
+         stock_minimo = COALESCE($5, stock_minimo),
+         stock_ideal = COALESCE($6, stock_ideal),
+         activo = COALESCE($7, activo)
+       WHERE id = $1
+       RETURNING id, nombre, unidad, stock_actual, stock_minimo, stock_ideal, activo`,
+      [
+        id,
+        nombre?.trim() ?? null,
+        unidad?.trim() ?? null,
+        stockActual ?? null,
+        stockMinimo ?? null,
+        stockIdeal ?? null,
+        activo ?? null,
+      ]
+    );
+    if (res.rowCount === 0) throw new Error(`Insumo ${id} no encontrado`);
+    return shapeInsumo(res.rows[0]);
+  },
+
+  eliminarInsumo: async ({ id }: { id: string }) => {
+    const pool = await getPool();
+    const res = await pool.query('DELETE FROM insumos WHERE id = $1', [id]);
     return (res.rowCount ?? 0) > 0;
   },
 

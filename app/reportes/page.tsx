@@ -275,6 +275,9 @@ export default function ReportesPage() {
           <Link href="/clientes" className="btn btn-blanco">
             👤 Clientes
           </Link>
+          <Link href="/stock" className="btn btn-blanco">
+            📦 Stock
+          </Link>
           <Link href="/configuracion" className="btn btn-blanco">
             ⚙️ Config
           </Link>

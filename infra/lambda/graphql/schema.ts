@@ -76,6 +76,17 @@ export const schema = buildSchema(`
     direccion: String
   }
 
+  type Insumo {
+    id: ID!
+    nombre: String!
+    unidad: String!
+    stockActual: Float!
+    stockMinimo: Float!
+    stockIdeal: Float!
+    activo: Boolean!
+    bajoMinimo: Boolean!
+  }
+
   type Query {
     menu: [MenuItem!]!
     menuAdmin: [MenuItem!]!
@@ -84,6 +95,7 @@ export const schema = buildSchema(`
     ridersAdmin: [Rider!]!
     pedidos(soloActivos: Boolean): [Pedido!]!
     configNegocio: ConfigNegocio
+    insumos: [Insumo!]!
   }
 
   input ItemInput {
@@ -139,5 +151,22 @@ export const schema = buildSchema(`
     crearRider(nombre: String!, telefono: String): Rider!
     actualizarRider(id: ID!, nombre: String, telefono: String, activo: Boolean): Rider!
     eliminarRider(id: ID!): Boolean!
+    crearInsumo(
+      nombre: String!
+      unidad: String!
+      stockActual: Float
+      stockMinimo: Float
+      stockIdeal: Float
+    ): Insumo!
+    actualizarInsumo(
+      id: ID!
+      nombre: String
+      unidad: String
+      stockActual: Float
+      stockMinimo: Float
+      stockIdeal: Float
+      activo: Boolean
+    ): Insumo!
+    eliminarInsumo(id: ID!): Boolean!
   }
 `);

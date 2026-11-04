@@ -94,6 +94,9 @@ export default function ConfiguracionPage() {
           <Link href="/reportes" className="btn btn-blanco">
             📈 Reportes
           </Link>
+          <Link href="/stock" className="btn btn-blanco">
+            📦 Stock
+          </Link>
         </div>
       </header>
 

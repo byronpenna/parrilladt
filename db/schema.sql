@@ -43,6 +43,22 @@ CREATE TABLE IF NOT EXISTS menu_items (
 CREATE UNIQUE INDEX IF NOT EXISTS menu_items_nombre_unique ON menu_items (nombre);
 CREATE INDEX IF NOT EXISTS menu_items_activo_idx ON menu_items (activo);
 
+-- ── Stock / insumos ─────────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS insumos (
+    id            BIGSERIAL PRIMARY KEY,
+    nombre        TEXT NOT NULL,
+    unidad        TEXT NOT NULL DEFAULT 'unidad',
+    stock_actual  NUMERIC(12,2) NOT NULL DEFAULT 0 CHECK (stock_actual >= 0),
+    stock_minimo  NUMERIC(12,2) NOT NULL DEFAULT 0 CHECK (stock_minimo >= 0),
+    stock_ideal   NUMERIC(12,2) NOT NULL DEFAULT 0 CHECK (stock_ideal >= 0),
+    activo        BOOLEAN NOT NULL DEFAULT true,
+    created_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at    TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS insumos_nombre_unique ON insumos (lower(trim(nombre)));
+CREATE INDEX IF NOT EXISTS insumos_activo_idx ON insumos (activo);
+
 -- ── Pedidos ─────────────────────────────────────────────────────────────
 DO $$ BEGIN
     CREATE TYPE estado_pedido AS ENUM (
@@ -142,6 +158,10 @@ CREATE OR REPLACE TRIGGER menu_items_set_updated_at
 
 CREATE OR REPLACE TRIGGER riders_set_updated_at
     BEFORE UPDATE ON riders
+    FOR EACH ROW EXECUTE FUNCTION set_updated_at();
+
+CREATE OR REPLACE TRIGGER insumos_set_updated_at
+    BEFORE UPDATE ON insumos
     FOR EACH ROW EXECUTE FUNCTION set_updated_at();
 
 CREATE OR REPLACE FUNCTION recalcular_total_pedido()

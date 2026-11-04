@@ -176,6 +176,9 @@ export default function ProductosPage() {
           <Link href="/reportes" className="btn btn-blanco">
             📈 Reportes
           </Link>
+          <Link href="/stock" className="btn btn-blanco">
+            📦 Stock
+          </Link>
           <Link href="/configuracion" className="btn btn-blanco">
             ⚙️ Config
           </Link>
