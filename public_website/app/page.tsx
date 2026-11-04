@@ -5,16 +5,36 @@ import { useEffect, useRef, useState } from 'react';
 const STORAGE_KEY = 'parrilladt_highscore';
 
 const VERDE_OSCURO = '#0f5c2a';
+const VERDE_CLARO = '#2ea34f';
 const NARANJA = '#ff7a00';
 const NARANJA_OSCURO = '#d96500';
 const BLANCO = '#ffffff';
+const CARBON = '#2b2b2b';
+const CARBON_CLARO = '#4a4a4a';
+
+const PUNTOS_POR_CLIENTE = 50;
 
 type Obstaculo = {
-  type: 'cono' | 'bache' | 'drone';
+  type: 'fuego' | 'carbon' | 'drone';
   x: number;
   w: number;
   h: number;
   y: number;
+};
+
+type Cliente = {
+  x: number;
+  w: number;
+  h: number;
+  y: number;
+  feliz: boolean;
+};
+
+type Popup = {
+  x: number;
+  y: number;
+  text: string;
+  age: number;
 };
 
 export default function Home() {
@@ -59,8 +79,13 @@ export default function Home() {
     let distance = 0;
     let lastTime = 0;
     let obstacles: Obstaculo[] = [];
+    let clientes: Cliente[] = [];
+    let popups: Popup[] = [];
+    let bonus = 0;
     let spawnTimer = 0;
     let nextSpawnIn = 900;
+    let clienteTimer = 0;
+    let nextClienteIn = 3000 + Math.random() * 2500;
     let running = false;
     let gameOver = false;
     let started = false;
@@ -73,10 +98,15 @@ export default function Home() {
       repartidor.onGround = true;
       repartidor.ducking = false;
       obstacles = [];
+      clientes = [];
+      popups = [];
+      bonus = 0;
       distance = 0;
       speed = baseSpeed;
       spawnTimer = 0;
       nextSpawnIn = 900;
+      clienteTimer = 0;
+      nextClienteIn = 3000 + Math.random() * 2500;
       gameOver = false;
       groundOffset = 0;
     }
@@ -93,7 +123,7 @@ export default function Home() {
     function endGame() {
       running = false;
       gameOver = true;
-      const score = Math.floor(distance / 10);
+      const score = Math.floor(distance / 10) + bonus;
       if (score > record) {
         record = score;
         try {
@@ -125,12 +155,16 @@ export default function Home() {
     function spawnObstacle() {
       const tipo = Math.random();
       if (tipo < 0.45) {
-        obstacles.push({ type: 'cono', x: W + 20, w: 26, h: 34, y: GROUND_Y });
+        obstacles.push({ type: 'fuego', x: W + 20, w: 26, h: 34, y: GROUND_Y });
       } else if (tipo < 0.8) {
-        obstacles.push({ type: 'bache', x: W + 20, w: 42, h: 12, y: GROUND_Y });
+        obstacles.push({ type: 'carbon', x: W + 20, w: 42, h: 14, y: GROUND_Y });
       } else {
         obstacles.push({ type: 'drone', x: W + 20, w: 34, h: 22, y: GROUND_Y - 58 });
       }
+    }
+
+    function spawnCliente() {
+      clientes.push({ x: W + 20, w: 28, h: 32, y: GROUND_Y - 85, feliz: false });
     }
 
     function currentHeight() {
@@ -183,7 +217,39 @@ export default function Home() {
         }
       }
 
-      setPuntaje(Math.floor(distance / 10));
+      clienteTimer += dt;
+      if (clienteTimer > nextClienteIn) {
+        spawnCliente();
+        clienteTimer = 0;
+        nextClienteIn = 3000 + Math.random() * 2500;
+      }
+
+      for (let i = clientes.length - 1; i >= 0; i--) {
+        const c = clientes[i];
+        c.x -= speed * dt;
+        if (c.x + c.w < -10) {
+          clientes.splice(i, 1);
+          continue;
+        }
+
+        if (!c.feliz) {
+          const cTop = c.y - c.h;
+          const overlapX = rRight - 6 > c.x && rLeft + 6 < c.x + c.w;
+          if (overlapX && rTop < c.y && cTop < repartidor.y) {
+            c.feliz = true;
+            bonus += PUNTOS_POR_CLIENTE;
+            popups.push({ x: c.x + c.w / 2, y: c.y - c.h, text: `+${PUNTOS_POR_CLIENTE}`, age: 0 });
+          }
+        }
+      }
+
+      for (let i = popups.length - 1; i >= 0; i--) {
+        popups[i].age += dt;
+        popups[i].y -= dt * 0.03;
+        if (popups[i].age > 700) popups.splice(i, 1);
+      }
+
+      setPuntaje(Math.floor(distance / 10) + bonus);
     }
 
     function dibujarRepartidor() {
@@ -247,20 +313,38 @@ export default function Home() {
 
     function dibujarObstaculo(o: Obstaculo) {
       ctx!.save();
-      if (o.type === 'cono') {
-        ctx!.fillStyle = NARANJA;
+      if (o.type === 'fuego') {
+        const cx = o.x + o.w / 2;
+        ctx!.fillStyle = NARANJA_OSCURO;
         ctx!.beginPath();
-        ctx!.moveTo(o.x + o.w / 2, o.y - o.h);
-        ctx!.lineTo(o.x, o.y);
-        ctx!.lineTo(o.x + o.w, o.y);
+        ctx!.moveTo(cx, o.y - o.h);
+        ctx!.quadraticCurveTo(o.x + o.w * 1.05, o.y - o.h * 0.5, cx, o.y);
+        ctx!.quadraticCurveTo(o.x - o.w * 0.05, o.y - o.h * 0.5, cx, o.y - o.h);
         ctx!.closePath();
         ctx!.fill();
-        ctx!.fillStyle = BLANCO;
-        ctx!.fillRect(o.x + 4, o.y - o.h * 0.45, o.w - 8, 4);
-      } else if (o.type === 'bache') {
-        ctx!.fillStyle = VERDE_OSCURO;
+
+        ctx!.fillStyle = NARANJA;
         ctx!.beginPath();
-        ctx!.ellipse(o.x + o.w / 2, o.y - o.h / 2, o.w / 2, o.h / 2, 0, 0, Math.PI * 2);
+        ctx!.moveTo(cx, o.y - o.h * 0.62);
+        ctx!.quadraticCurveTo(cx + o.w * 0.3, o.y - o.h * 0.32, cx, o.y - 2);
+        ctx!.quadraticCurveTo(cx - o.w * 0.3, o.y - o.h * 0.32, cx, o.y - o.h * 0.62);
+        ctx!.closePath();
+        ctx!.fill();
+      } else if (o.type === 'carbon') {
+        ctx!.fillStyle = CARBON;
+        const r = o.h / 2;
+        ctx!.beginPath();
+        ctx!.ellipse(o.x + r, o.y - r, r, r, 0, 0, Math.PI * 2);
+        ctx!.ellipse(o.x + o.w / 2, o.y - r * 1.2, r * 1.1, r * 1.1, 0, 0, Math.PI * 2);
+        ctx!.ellipse(o.x + o.w - r, o.y - r, r, r, 0, 0, Math.PI * 2);
+        ctx!.fill();
+        ctx!.fillStyle = CARBON_CLARO;
+        ctx!.beginPath();
+        ctx!.ellipse(o.x + o.w / 2 - 3, o.y - r * 1.5, 3, 2, 0, 0, Math.PI * 2);
+        ctx!.fill();
+        ctx!.fillStyle = NARANJA;
+        ctx!.beginPath();
+        ctx!.ellipse(o.x + o.w / 2 + 4, o.y - r * 1.1, 2, 1.4, 0, 0, Math.PI * 2);
         ctx!.fill();
       } else {
         ctx!.fillStyle = NARANJA_OSCURO;
@@ -275,6 +359,61 @@ export default function Home() {
         ctx!.stroke();
       }
       ctx!.restore();
+    }
+
+    function dibujarCliente(c: Cliente) {
+      ctx!.save();
+      const cx = c.x + c.w / 2;
+      const cabezaY = c.y - c.h + 10;
+
+      ctx!.fillStyle = VERDE_CLARO;
+      ctx!.fillRect(c.x + 4, c.y - c.h + 16, c.w - 8, c.h - 16);
+
+      ctx!.fillStyle = BLANCO;
+      ctx!.strokeStyle = VERDE_OSCURO;
+      ctx!.lineWidth = 1.5;
+      ctx!.beginPath();
+      ctx!.arc(cx, cabezaY, 10, 0, Math.PI * 2);
+      ctx!.fill();
+      ctx!.stroke();
+
+      ctx!.fillStyle = VERDE_OSCURO;
+      ctx!.beginPath();
+      ctx!.arc(cx - 3.5, cabezaY - 1, 1.4, 0, Math.PI * 2);
+      ctx!.arc(cx + 3.5, cabezaY - 1, 1.4, 0, Math.PI * 2);
+      ctx!.fill();
+
+      ctx!.strokeStyle = c.feliz ? NARANJA : VERDE_OSCURO;
+      ctx!.lineWidth = 1.6;
+      ctx!.beginPath();
+      if (c.feliz) {
+        ctx!.arc(cx, cabezaY + 2, 4, 0.15 * Math.PI, 0.85 * Math.PI);
+      } else {
+        ctx!.arc(cx, cabezaY + 7, 4, 1.15 * Math.PI, 1.85 * Math.PI);
+      }
+      ctx!.stroke();
+
+      if (c.feliz) {
+        ctx!.fillStyle = NARANJA;
+        ctx!.font = 'bold 14px sans-serif';
+        ctx!.textAlign = 'center';
+        ctx!.fillText('♥', cx, cabezaY - 14);
+      }
+
+      ctx!.restore();
+    }
+
+    function dibujarPopups() {
+      popups.forEach((p) => {
+        const alpha = Math.max(0, 1 - p.age / 700);
+        ctx!.save();
+        ctx!.globalAlpha = alpha;
+        ctx!.fillStyle = NARANJA_OSCURO;
+        ctx!.font = 'bold 14px sans-serif';
+        ctx!.textAlign = 'center';
+        ctx!.fillText(p.text, p.x, p.y);
+        ctx!.restore();
+      });
     }
 
     function draw() {
@@ -296,7 +435,9 @@ export default function Home() {
       }
 
       obstacles.forEach(dibujarObstaculo);
+      clientes.forEach(dibujarCliente);
       dibujarRepartidor();
+      dibujarPopups();
     }
 
     function loop(t: number) {
@@ -381,6 +522,8 @@ export default function Home() {
       <p className="ayuda">
         <kbd>Espacio</kbd> / <kbd>↑</kbd> saltar · <kbd>↓</kbd> agacharse · en móvil: toca arriba para
         saltar, mantén abajo para agacharte
+        <br />
+        Salta para alcanzar a los clientes tristes y entregarles su pedido: suman puntos extra.
       </p>
     </div>
   );
