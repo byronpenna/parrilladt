@@ -3,11 +3,11 @@ frontend:
   phases:
     preBuild:
       commands:
-        - cd public_website && npm ci
+        - npm --prefix public_website ci
     build:
       commands:
-        - cd public_website && env | grep -e GRAPHQL_ >> .env.production
-        - cd public_website && npm run build
+        - env | grep -e GRAPHQL_ >> public_website/.env.production
+        - npm --prefix public_website run build
   artifacts:
     baseDirectory: public_website/.next
     files:
