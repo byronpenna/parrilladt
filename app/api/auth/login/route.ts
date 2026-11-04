@@ -35,7 +35,8 @@ export async function POST(req: NextRequest) {
       maxAge: expiresIn,
     });
     return response;
-  } catch {
+  } catch (err) {
+    console.error('login error', err);
     return NextResponse.json({ error: 'Usuario o contraseña incorrectos' }, { status: 401 });
   }
 }
