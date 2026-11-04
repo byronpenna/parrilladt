@@ -1,0 +1,152 @@
+/* Paleta compartida con el back-office. Ver /STYLE.md antes de tocar esto. */
+:root {
+  --verde: #1c7d3e;
+  --verde-oscuro: #0f5c2a;
+  --verde-claro: #2ea34f;
+  --blanco: #ffffff;
+  --naranja: #ff7a00;
+  --naranja-oscuro: #d96500;
+  --gris-texto: #1c2b1f;
+  --sombra: 0 4px 10px rgba(0, 0, 0, 0.18);
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  height: 100%;
+  font-family: 'Segoe UI', Roboto, Arial, sans-serif;
+  color: var(--gris-texto);
+  background:
+    repeating-linear-gradient(
+      90deg,
+      var(--verde) 0px,
+      var(--verde) 80px,
+      var(--verde-claro) 80px,
+      var(--verde-claro) 160px
+    );
+  background-attachment: fixed;
+}
+
+.wrap {
+  min-height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 32px 16px 48px;
+  text-align: center;
+}
+
+/* Franja tipo "línea de mediocampo", igual que el back-office */
+.cancha-header {
+  background: var(--verde-oscuro);
+  color: var(--blanco);
+  padding: 20px 24px 32px;
+  border-bottom: 6px solid var(--blanco);
+  box-shadow: var(--sombra);
+  position: relative;
+  border-radius: 14px;
+  margin-bottom: 10px;
+  overflow: hidden;
+}
+
+.cancha-header::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  bottom: -23px;
+  transform: translateX(-50%);
+  width: 46px;
+  height: 46px;
+  border: 5px solid var(--blanco);
+  border-radius: 50%;
+  background: var(--verde-oscuro);
+  z-index: 0;
+}
+
+.cancha-header > * {
+  position: relative;
+  z-index: 1;
+}
+
+.logo {
+  position: relative;
+  font-size: 2.4rem;
+  margin: 0;
+  letter-spacing: 0.5px;
+}
+.logo span { color: var(--naranja); }
+
+.subtitulo {
+  font-size: 1.05rem;
+  color: var(--blanco);
+  margin: 26px 0 0;
+  max-width: 480px;
+}
+
+.pronto {
+  display: inline-block;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  color: var(--verde-oscuro);
+  background: var(--blanco);
+  padding: 6px 16px;
+  border-radius: 999px;
+  font-weight: 700;
+  margin-bottom: 14px;
+}
+
+.game-card {
+  background: var(--blanco);
+  border: 3px solid var(--verde-oscuro);
+  border-radius: 14px;
+  padding: 14px 14px 10px;
+  box-shadow: var(--sombra);
+  max-width: 640px;
+  width: 100%;
+  margin-top: 24px;
+}
+
+canvas {
+  display: block;
+  width: 100%;
+  height: auto;
+  background: #eef8f0;
+  border-radius: 8px;
+  touch-action: none;
+}
+
+.hud-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.85rem;
+  color: var(--verde-oscuro);
+  padding: 8px 4px 0;
+  font-weight: 600;
+}
+.hud-row b { color: var(--naranja); }
+
+.ayuda {
+  margin-top: 16px;
+  font-size: 0.85rem;
+  color: var(--verde-oscuro);
+}
+.ayuda kbd {
+  background: var(--blanco);
+  border: 1px solid var(--verde);
+  border-radius: 4px;
+  padding: 1px 7px;
+  font-family: inherit;
+  color: var(--verde-oscuro);
+}
+
+.overlay-msg {
+  font-size: 0.95rem;
+  color: var(--naranja-oscuro);
+  min-height: 1.4em;
+  margin-top: 2px;
+  font-weight: 600;
+}
