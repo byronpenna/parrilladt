@@ -1,18 +1,20 @@
 version: 1
-frontend:
-  phases:
-    preBuild:
-      commands:
-        - npm --prefix public_website ci
-    build:
-      commands:
-        - env | grep -e GRAPHQL_ >> public_website/.env.production
-        - npm --prefix public_website run build
-  artifacts:
-    baseDirectory: public_website/.next
-    files:
-      - '**/*'
-  cache:
-    paths:
-      - public_website/node_modules/**/*
-      - public_website/.next/cache/**/*
+applications:
+  - appRoot: public_website
+    frontend:
+      phases:
+        preBuild:
+          commands:
+            - npm ci
+        build:
+          commands:
+            - env | grep -e GRAPHQL_ >> .env.production
+            - npm run build
+      artifacts:
+        baseDirectory: .next
+        files:
+          - '**/*'
+      cache:
+        paths:
+          - node_modules/**/*
+          - .next/cache/**/*
