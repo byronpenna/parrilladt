@@ -3,16 +3,16 @@ frontend:
   phases:
     preBuild:
       commands:
-        - npm ci
+        - cd public_website && npm ci
     build:
       commands:
-        - env | grep -e COGNITO_ -e GRAPHQL_ >> .env.production
-        - npm run build
+        - cd public_website && env | grep -e GRAPHQL_ >> .env.production
+        - cd public_website && npm run build
   artifacts:
-    baseDirectory: .next
+    baseDirectory: public_website/.next
     files:
       - '**/*'
   cache:
     paths:
-      - node_modules/**/*
-      - .next/cache/**/*
+      - public_website/node_modules/**/*
+      - public_website/.next/cache/**/*
