@@ -14,15 +14,13 @@ import {
   MUTATION_AGREGAR_CLIENTE,
 } from '@/lib/queries';
 import type { MenuItem, Cliente, Rider, MetodoPago, ConfigNegocio } from '@/lib/types';
+import { COSTO_DELIVERY_MIN, COSTO_DELIVERY_PASO } from '@/lib/constants';
 
 const CLAVE_MENU = 'cancha_menu_cache';
 const CLAVE_CLIENTES = 'cancha_clientes_cache';
 const CLAVE_RIDERS = 'cancha_riders_cache';
 const CLAVE_PENDIENTES = 'cancha_pedidos_pendientes';
 const CLAVE_PROGRAMADOS = 'cancha_pedidos_programados';
-
-const COSTO_DELIVERY_MIN = 1;
-const COSTO_DELIVERY_PASO = 0.5;
 
 interface ItemCarrito {
   nombre: string;
@@ -89,6 +87,7 @@ export default function TabletPage() {
   const [clienteLat, setClienteLat] = useState<number | null>(null);
   const [clienteLng, setClienteLng] = useState<number | null>(null);
   const [clienteDireccion, setClienteDireccion] = useState('');
+  const [modalEnvioAbierto, setModalEnvioAbierto] = useState(false);
   const [metodoPago, setMetodoPago] = useState<MetodoPago>('efectivo');
   const [pagaCon, setPagaCon] = useState('');
   const [modoEnvio, setModoEnvio] = useState<'inmediato' | 'programado'>('inmediato');
@@ -179,6 +178,16 @@ export default function TabletPage() {
       setClienteLng(null);
       setClienteDireccion('');
     }
+  }
+
+  function cambiarRiderDesdeModal(valor: string) {
+    cambiarRider(valor);
+    if (!valor) setModalEnvioAbierto(false);
+  }
+
+  function quitarEntregaDomicilio() {
+    cambiarRider('');
+    setModalEnvioAbierto(false);
   }
 
   function cambiarUbicacionCliente(lat: number, lng: number, direccion: string | null) {
@@ -304,6 +313,7 @@ export default function TabletPage() {
     setClienteLat(null);
     setClienteLng(null);
     setClienteDireccion('');
+    setModalEnvioAbierto(false);
   }
 
   async function enviarPedido() {
@@ -541,46 +551,32 @@ export default function TabletPage() {
             value={nota}
             onChange={(e) => setNota(e.target.value)}
           />
-          <select id="riderSelect" value={riderId} onChange={(e) => cambiarRider(e.target.value)}>
-            <option value="">Sin rider (retiro en local)</option>
-            {riders.map((r) => (
-              <option key={r.id} value={r.id}>
-                {r.nombre}
-              </option>
-            ))}
-          </select>
-          {riderId && (
-            <div className="delivery-box">
-              <label>Costo de delivery</label>
-              <div className="stepper">
-                <button className="menos" onClick={bajarCostoDelivery} disabled={costoDelivery <= COSTO_DELIVERY_MIN}>
-                  −
-                </button>
-                <span className="cant">${costoDelivery.toFixed(2)}</span>
-                <button className="mas" onClick={subirCostoDelivery}>
-                  +
-                </button>
-              </div>
-            </div>
-          )}
-          {riderId && (
-            <div className="delivery-box">
-              <label>Ubicación de entrega</label>
-              {!configNegocio && (
-                <div style={{ fontSize: '0.8rem', color: '#8a5a1f' }}>
-                  Configura la ubicación del negocio en ⚙️ Config para calcular la distancia.
-                </div>
-              )}
-              <MapaUbicacion
-                lat={clienteLat}
-                lng={clienteLng}
-                onChange={cambiarUbicacionCliente}
-                referencia={referenciaNegocio}
-                alto={220}
-              />
-              {clienteDireccion && <div style={{ fontSize: '0.85rem', color: '#666' }}>{clienteDireccion}</div>}
-            </div>
-          )}
+          <div className="envio-toggle">
+            <button
+              type="button"
+              className={`envio-toggle-btn ${riderId ? 'activo' : ''}`}
+              onClick={() => setModalEnvioAbierto(true)}
+            >
+              <span className="envio-toggle-icono">🏍️</span>
+              <span className="envio-toggle-texto">
+                {riderId ? riders.find((r) => r.id === riderId)?.nombre || 'Entrega a domicilio' : 'Retiro en local'}
+              </span>
+              {riderId && <span className="envio-toggle-costo">${costoDelivery.toFixed(2)}</span>}
+            </button>
+            {riderId && (
+              <button
+                type="button"
+                className="envio-toggle-quitar"
+                title="Quitar entrega a domicilio"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  quitarEntregaDomicilio();
+                }}
+              >
+                ✕
+              </button>
+            )}
+          </div>
           {riderId && <div className="subtotal-linea">Subtotal: ${subtotalItems.toFixed(2)}</div>}
           <div className="total">Total: ${total.toFixed(2)}</div>
           <div className="metodo-pago-toggle">
@@ -659,6 +655,71 @@ export default function TabletPage() {
           </div>
         </aside>
       </div>
+
+      {modalEnvioAbierto && (
+        <div className="modal-overlay" onClick={() => setModalEnvioAbierto(false)}>
+          <div className="modal-box" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3>🏍️ Entrega a domicilio</h3>
+              <button type="button" className="modal-cerrar" onClick={() => setModalEnvioAbierto(false)}>
+                ✕
+              </button>
+            </div>
+            <div className="modal-cuerpo">
+              <select id="riderSelect" value={riderId} onChange={(e) => cambiarRiderDesdeModal(e.target.value)}>
+                <option value="">Sin rider (retiro en local)</option>
+                {riders.map((r) => (
+                  <option key={r.id} value={r.id}>
+                    {r.nombre}
+                  </option>
+                ))}
+              </select>
+              {riderId && (
+                <div className="delivery-box">
+                  <label>Costo de delivery</label>
+                  <div className="stepper">
+                    <button className="menos" onClick={bajarCostoDelivery} disabled={costoDelivery <= COSTO_DELIVERY_MIN}>
+                      −
+                    </button>
+                    <span className="cant">${costoDelivery.toFixed(2)}</span>
+                    <button className="mas" onClick={subirCostoDelivery}>
+                      +
+                    </button>
+                  </div>
+                </div>
+              )}
+              {riderId && (
+                <div className="delivery-box">
+                  <label>Ubicación de entrega</label>
+                  {!configNegocio && (
+                    <div style={{ fontSize: '0.8rem', color: '#8a5a1f' }}>
+                      Configura la ubicación del negocio en ⚙️ Config para calcular la distancia.
+                    </div>
+                  )}
+                  <MapaUbicacion
+                    lat={clienteLat}
+                    lng={clienteLng}
+                    onChange={cambiarUbicacionCliente}
+                    referencia={referenciaNegocio}
+                    alto={220}
+                  />
+                  {clienteDireccion && <div style={{ fontSize: '0.85rem', color: '#666' }}>{clienteDireccion}</div>}
+                </div>
+              )}
+            </div>
+            <div className="modal-footer">
+              {riderId && (
+                <button type="button" className="btn btn-blanco" onClick={quitarEntregaDomicilio}>
+                  Quitar entrega
+                </button>
+              )}
+              <button type="button" className="btn btn-naranja" onClick={() => setModalEnvioAbierto(false)}>
+                Listo
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div id="toast" className={toast.visible ? 'mostrar' : ''}>
         {toast.msg}

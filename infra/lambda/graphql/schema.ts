@@ -112,7 +112,16 @@ export const schema = buildSchema(`
       clienteDireccion: String
     ): Pedido!
     actualizarEstado(id: ID!, estado: EstadoPedido!): Pedido!
-    actualizarPedido(id: ID!, riderId: ID, metodoPago: MetodoPago, horaEntrega: String): Pedido!
+    actualizarPedido(
+      id: ID!
+      riderId: ID
+      metodoPago: MetodoPago
+      horaEntrega: String
+      costoDelivery: Float
+      clienteLat: Float
+      clienteLng: Float
+      clienteDireccion: String
+    ): Pedido!
     actualizarConfigNegocio(latitud: Float!, longitud: Float!, direccion: String): ConfigNegocio!
     agregarCliente(nombre: String!, telefono: String): Cliente!
     actualizarCliente(id: ID!, nombre: String, telefono: String): Cliente!

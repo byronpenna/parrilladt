@@ -254,6 +254,45 @@ html, body {
 .programados-lista li {
   display: flex; justify-content: space-between; align-items: center; font-size: 0.9rem;
 }
+.envio-toggle { display: flex; align-items: stretch; gap: 8px; }
+.envio-toggle-btn {
+  flex: 1; display: flex; align-items: center; gap: 8px;
+  background: var(--blanco); border: 2px solid #ddd; color: #888;
+  border-radius: 10px; padding: 10px 14px; font-weight: 700; font-size: 1rem;
+  cursor: pointer; text-align: left;
+}
+.envio-toggle-btn .envio-toggle-icono { font-size: 1.3rem; filter: grayscale(1); opacity: 0.6; }
+.envio-toggle-btn.activo {
+  background: #fff6e8; border-color: var(--naranja); color: var(--naranja-oscuro);
+}
+.envio-toggle-btn.activo .envio-toggle-icono { filter: none; opacity: 1; }
+.envio-toggle-texto { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.envio-toggle-costo { font-weight: 800; }
+.envio-toggle-quitar {
+  background: var(--blanco); border: 2px solid #ddd; color: #c0392b;
+  border-radius: 10px; width: 44px; font-size: 1.1rem; font-weight: 700; cursor: pointer;
+}
+
+.modal-overlay {
+  position: fixed; inset: 0; background: rgba(0, 0, 0, 0.5);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 100; padding: 16px;
+}
+.modal-box {
+  background: var(--blanco); border-radius: 14px; box-shadow: var(--sombra);
+  width: 100%; max-width: 440px; max-height: 90vh;
+  display: flex; flex-direction: column; overflow: hidden;
+}
+.modal-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 14px 18px; border-bottom: 2px solid #eee;
+}
+.modal-header h3 { margin: 0; color: var(--verde-oscuro); }
+.modal-cerrar { background: none; border: none; font-size: 1.3rem; cursor: pointer; color: #888; }
+.modal-cuerpo { padding: 16px 18px; display: flex; flex-direction: column; gap: 12px; overflow-y: auto; }
+.modal-footer { display: flex; gap: 10px; padding: 14px 18px; border-top: 2px solid #eee; }
+.modal-footer .btn { flex: 1; }
+
 .delivery-box {
   display: flex; flex-direction: column; gap: 6px;
   background: #f7f7f7; border-radius: 10px; padding: 10px 12px;

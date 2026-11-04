@@ -275,6 +275,10 @@ export const rootValue = {
     riderId?: string | null;
     metodoPago?: string;
     horaEntrega?: string | null;
+    costoDelivery?: number;
+    clienteLat?: number | null;
+    clienteLng?: number | null;
+    clienteDireccion?: string | null;
   }) => {
     const pool = await getPool();
     const sets: string[] = [];
@@ -292,6 +296,36 @@ export const rootValue = {
     if (Object.prototype.hasOwnProperty.call(args, 'horaEntrega')) {
       sets.push(`hora_entrega = $${i++}`);
       values.push(args.horaEntrega || null);
+    }
+    if (Object.prototype.hasOwnProperty.call(args, 'costoDelivery')) {
+      sets.push(`costo_delivery = $${i++}`);
+      values.push(args.costoDelivery ?? 0);
+    }
+    // lat/lng/direccion viajan juntos desde el modal de ubicación: si se toca uno, se
+    // recalcula la distancia contra el negocio con los tres a la vez
+    if (
+      Object.prototype.hasOwnProperty.call(args, 'clienteLat') ||
+      Object.prototype.hasOwnProperty.call(args, 'clienteLng') ||
+      Object.prototype.hasOwnProperty.call(args, 'clienteDireccion')
+    ) {
+      const lat = args.clienteLat ?? null;
+      const lng = args.clienteLng ?? null;
+      let distanciaKm: number | null = null;
+      if (typeof lat === 'number' && typeof lng === 'number') {
+        const configRes = await pool.query('SELECT latitud, longitud FROM config_negocio WHERE id = true');
+        if (configRes.rowCount && configRes.rowCount > 0) {
+          const { latitud, longitud } = configRes.rows[0];
+          distanciaKm = distanciaHaversineKm(Number(latitud), Number(longitud), lat, lng);
+        }
+      }
+      sets.push(`cliente_lat = $${i++}`);
+      values.push(lat);
+      sets.push(`cliente_lng = $${i++}`);
+      values.push(lng);
+      sets.push(`cliente_direccion = $${i++}`);
+      values.push(args.clienteDireccion || null);
+      sets.push(`distancia_km = $${i++}`);
+      values.push(distanciaKm);
     }
     if (sets.length > 0) {
       const res = await pool.query(`UPDATE pedidos SET ${sets.join(', ')} WHERE id = $1 RETURNING id`, [

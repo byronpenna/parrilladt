@@ -28,6 +28,7 @@ export const QUERY_PEDIDOS = `
       total
       createdAt
       itemsTexto
+      riderId
       riderNombre
       costoDelivery
       metodoPago
@@ -110,13 +111,36 @@ export const MUTATION_ACTUALIZAR_ESTADO = `
 `;
 
 export const MUTATION_ACTUALIZAR_PEDIDO = `
-  mutation ActualizarPedido($id: ID!, $riderId: ID, $metodoPago: MetodoPago, $horaEntrega: String) {
-    actualizarPedido(id: $id, riderId: $riderId, metodoPago: $metodoPago, horaEntrega: $horaEntrega) {
+  mutation ActualizarPedido(
+    $id: ID!
+    $riderId: ID
+    $metodoPago: MetodoPago
+    $horaEntrega: String
+    $costoDelivery: Float
+    $clienteLat: Float
+    $clienteLng: Float
+    $clienteDireccion: String
+  ) {
+    actualizarPedido(
+      id: $id
+      riderId: $riderId
+      metodoPago: $metodoPago
+      horaEntrega: $horaEntrega
+      costoDelivery: $costoDelivery
+      clienteLat: $clienteLat
+      clienteLng: $clienteLng
+      clienteDireccion: $clienteDireccion
+    ) {
       id
       riderId
       riderNombre
+      costoDelivery
       metodoPago
       horaEntrega
+      clienteLat
+      clienteLng
+      clienteDireccion
+      distanciaKm
     }
   }
 `;

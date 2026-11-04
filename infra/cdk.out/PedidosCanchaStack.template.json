@@ -287,7 +287,7 @@
    "Properties": {
     "Code": {
      "S3Bucket": "cdk-hnb659fds-assets-861418247819-us-east-1",
-     "S3Key": "0870d210837627ea1600494ecea064553b7e141b8423c47dbb3b7b5770d225be.zip"
+     "S3Key": "e1c5afbb5ea8ccf3eb7f041ef0a7cb0921c7269d793adad06b718208d4d0d9b7.zip"
     },
     "Environment": {
      "Variables": {
@@ -332,7 +332,7 @@
    ],
    "Metadata": {
     "aws:cdk:path": "PedidosCanchaStack/GraphqlFn/Resource",
-    "aws:asset:path": "asset.0870d210837627ea1600494ecea064553b7e141b8423c47dbb3b7b5770d225be",
+    "aws:asset:path": "asset.e1c5afbb5ea8ccf3eb7f041ef0a7cb0921c7269d793adad06b718208d4d0d9b7",
     "aws:asset:is-bundled": true,
     "aws:asset:property": "Code"
    }
