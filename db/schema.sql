@@ -43,6 +43,23 @@ CREATE TABLE IF NOT EXISTS menu_items (
 CREATE UNIQUE INDEX IF NOT EXISTS menu_items_nombre_unique ON menu_items (nombre);
 CREATE INDEX IF NOT EXISTS menu_items_activo_idx ON menu_items (activo);
 
+-- ── Fotos de productos ──────────────────────────────────────────────────
+-- foto_key es el objeto en el bucket público de fotos (ver lib/s3-fotos-productos.ts);
+-- la URL pública se arma en el resolver, no se guarda aquí.
+CREATE TABLE IF NOT EXISTS menu_item_fotos (
+    id            BIGSERIAL PRIMARY KEY,
+    menu_item_id  BIGINT NOT NULL REFERENCES menu_items(id) ON DELETE CASCADE,
+    foto_key      TEXT NOT NULL,
+    principal     BOOLEAN NOT NULL DEFAULT false,
+    created_at    TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS menu_item_fotos_menu_item_id_idx ON menu_item_fotos (menu_item_id);
+
+-- a lo sumo una foto principal por producto
+CREATE UNIQUE INDEX IF NOT EXISTS menu_item_fotos_principal_unique
+    ON menu_item_fotos (menu_item_id) WHERE principal;
+
 -- ── Stock / insumos ─────────────────────────────────────────────────────
 -- stock_actual no se edita directo: lo mantiene al día el trigger de
 -- insumo_movimientos (ver más abajo), para que cada cambio quede en el

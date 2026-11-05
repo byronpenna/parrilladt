@@ -293,6 +293,53 @@ html, body {
 .modal-footer { display: flex; gap: 10px; padding: 14px 18px; border-top: 2px solid #eee; }
 .modal-footer .btn { flex: 1; }
 
+.modal-box-ancho { max-width: 640px; }
+
+.carrusel { display: flex; flex-direction: column; gap: 10px; }
+.carrusel-visor {
+  position: relative;
+  background: #f2f2f2;
+  border-radius: 10px;
+  min-height: 280px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+.carrusel-visor img { max-width: 100%; max-height: 360px; object-fit: contain; }
+.carrusel-vacio { color: #999; padding: 40px 0; }
+.carrusel-flecha {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  background: rgba(255, 255, 255, 0.9);
+  border: 2px solid var(--verde);
+  color: var(--verde-oscuro);
+  border-radius: 50%;
+  width: 36px;
+  height: 36px;
+  font-size: 1.1rem;
+  cursor: pointer;
+}
+.carrusel-flecha.izq { left: 10px; }
+.carrusel-flecha.der { right: 10px; }
+.carrusel-acciones { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
+.carrusel-miniaturas { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
+.miniatura {
+  width: 56px;
+  height: 56px;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 2px solid transparent;
+  cursor: pointer;
+  position: relative;
+  background: #f2f2f2;
+}
+.miniatura img { width: 100%; height: 100%; object-fit: cover; }
+.miniatura.activa { border-color: var(--naranja); }
+.miniatura-principal { position: absolute; bottom: 0; right: 0; background: var(--verde); color: var(--blanco); font-size: 0.6rem; padding: 1px 3px; }
+.badge-principal { display: inline-block; background: var(--verde); color: var(--blanco); font-size: 0.75rem; font-weight: 700; padding: 2px 8px; border-radius: 999px; }
+
 .delivery-box {
   display: flex; flex-direction: column; gap: 6px;
   background: #f7f7f7; border-radius: 10px; padding: 10px 12px;

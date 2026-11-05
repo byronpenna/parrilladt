@@ -20,6 +20,16 @@ export const schema = buildSchema(`
     categoria: String!
     precio: Float!
     activo: Boolean!
+    fotoPrincipalUrl: String
+  }
+
+  type FotoMenuItem {
+    id: ID!
+    menuItemId: ID!
+    key: String!
+    url: String!
+    principal: Boolean!
+    createdAt: String!
   }
 
   type Cliente {
@@ -113,6 +123,7 @@ export const schema = buildSchema(`
     pedidos(soloActivos: Boolean): [Pedido!]!
     configNegocio: ConfigNegocio
     insumos: [Insumo!]!
+    fotosMenuItem(menuItemId: ID!): [FotoMenuItem!]!
     movimientosInsumo(insumoId: ID!): [MovimientoInsumo!]!
   }
 
@@ -166,6 +177,9 @@ export const schema = buildSchema(`
       activo: Boolean
     ): MenuItem!
     eliminarProductoMenu(id: ID!): Boolean!
+    agregarFotoMenuItem(menuItemId: ID!, key: String!, principal: Boolean): FotoMenuItem!
+    marcarFotoPrincipal(id: ID!): FotoMenuItem!
+    eliminarFotoMenuItem(id: ID!): Boolean!
     crearRider(nombre: String!, telefono: String): Rider!
     actualizarRider(id: ID!, nombre: String, telefono: String, activo: Boolean): Rider!
     eliminarRider(id: ID!): Boolean!

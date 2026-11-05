@@ -156,7 +156,7 @@
    "Properties": {
     "Code": {
      "S3Bucket": "cdk-hnb659fds-assets-861418247819-us-east-1",
-     "S3Key": "9d5a052004309adab44d7bdb640c82764d736396fdb5bff35f1fd7ef9e2c247a.zip"
+     "S3Key": "d9def45d06420ee6e24c7c70261b71e74556a2f35bde16fbb0a6a7bf5dde963e.zip"
     },
     "Environment": {
      "Variables": {
@@ -202,7 +202,7 @@
    ],
    "Metadata": {
     "aws:cdk:path": "PedidosCanchaStack/MigrateFn/Resource",
-    "aws:asset:path": "asset.9d5a052004309adab44d7bdb640c82764d736396fdb5bff35f1fd7ef9e2c247a",
+    "aws:asset:path": "asset.d9def45d06420ee6e24c7c70261b71e74556a2f35bde16fbb0a6a7bf5dde963e",
     "aws:asset:is-bundled": true,
     "aws:asset:property": "Code"
    }
@@ -287,7 +287,7 @@
    "Properties": {
     "Code": {
      "S3Bucket": "cdk-hnb659fds-assets-861418247819-us-east-1",
-     "S3Key": "ac64df58173726fa01f12fa381db75735f5a2fdff02687de076a55dba4cd568f.zip"
+     "S3Key": "035c816dff34eddd439d0e578c205724b95d11adad7dc6c47a1df8a6d08a571b.zip"
     },
     "Environment": {
      "Variables": {
@@ -297,6 +297,18 @@
       "APP_DB_ROLE": "pedidos_cancha_app",
       "APP_SECRET_ARN": {
        "Ref": "AppDbSecretE6515E4A"
+      },
+      "FOTOS_BUCKET_PUBLIC_URL": {
+       "Fn::Join": [
+        "",
+        [
+         "https://",
+         {
+          "Ref": "FotosProductosBucket7EFDE48C"
+         },
+         ".s3.us-east-1.amazonaws.com"
+        ]
+       ]
       }
      }
     },
@@ -332,7 +344,7 @@
    ],
    "Metadata": {
     "aws:cdk:path": "PedidosCanchaStack/GraphqlFn/Resource",
-    "aws:asset:path": "asset.ac64df58173726fa01f12fa381db75735f5a2fdff02687de076a55dba4cd568f",
+    "aws:asset:path": "asset.035c816dff34eddd439d0e578c205724b95d11adad7dc6c47a1df8a6d08a571b",
     "aws:asset:is-bundled": true,
     "aws:asset:property": "Code"
    }
@@ -412,12 +424,32 @@
          ]
         },
         {
+         "Fn::GetAtt": [
+          "FotosProductosBucket7EFDE48C",
+          "Arn"
+         ]
+        },
+        {
          "Fn::Join": [
           "",
           [
            {
             "Fn::GetAtt": [
              "FacturasInsumosBucketF9033F68",
+             "Arn"
+            ]
+           },
+           "/*"
+          ]
+         ]
+        },
+        {
+         "Fn::Join": [
+          "",
+          [
+           {
+            "Fn::GetAtt": [
+             "FotosProductosBucket7EFDE48C",
              "Arn"
             ]
            },
@@ -481,6 +513,86 @@
    "DeletionPolicy": "Retain",
    "Metadata": {
     "aws:cdk:path": "PedidosCanchaStack/FacturasInsumosBucket/Resource"
+   }
+  },
+  "FotosProductosBucket7EFDE48C": {
+   "Type": "AWS::S3::Bucket",
+   "Properties": {
+    "BucketEncryption": {
+     "ServerSideEncryptionConfiguration": [
+      {
+       "ServerSideEncryptionByDefault": {
+        "SSEAlgorithm": "AES256"
+       }
+      }
+     ]
+    },
+    "BucketName": "pedidos-cancha-fotos-productos",
+    "CorsConfiguration": {
+     "CorsRules": [
+      {
+       "AllowedHeaders": [
+        "*"
+       ],
+       "AllowedMethods": [
+        "PUT"
+       ],
+       "AllowedOrigins": [
+        "https://admin.parrilladeldt.com",
+        "http://localhost:3000"
+       ]
+      }
+     ]
+    },
+    "PublicAccessBlockConfiguration": {
+     "BlockPublicAcls": true,
+     "BlockPublicPolicy": false,
+     "IgnorePublicAcls": true,
+     "RestrictPublicBuckets": false
+    }
+   },
+   "UpdateReplacePolicy": "Retain",
+   "DeletionPolicy": "Retain",
+   "Metadata": {
+    "aws:cdk:path": "PedidosCanchaStack/FotosProductosBucket/Resource"
+   }
+  },
+  "FotosProductosBucketPolicy21ED1DE3": {
+   "Type": "AWS::S3::BucketPolicy",
+   "Properties": {
+    "Bucket": {
+     "Ref": "FotosProductosBucket7EFDE48C"
+    },
+    "PolicyDocument": {
+     "Statement": [
+      {
+       "Action": "s3:GetObject",
+       "Effect": "Allow",
+       "Principal": {
+        "AWS": "*"
+       },
+       "Resource": {
+        "Fn::Join": [
+         "",
+         [
+          {
+           "Fn::GetAtt": [
+            "FotosProductosBucket7EFDE48C",
+            "Arn"
+           ]
+          },
+          "/*"
+         ]
+        ]
+       },
+       "Sid": "PublicRead"
+      }
+     ],
+     "Version": "2012-10-17"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "PedidosCanchaStack/FotosProductosBucket/Policy/Resource"
    }
   },
   "UserPool6BA7E5F2": {
@@ -734,7 +846,7 @@
   "CDKMetadata": {
    "Type": "AWS::CDK::Metadata",
    "Properties": {
-    "Analytics": "v2:deflate64:H4sIAAAAAAAA/12PT2/CMAzFPwv31OvKYbuOSkNcNkS1MwrBrQKpg2JnCEX97lPalf05vZ/tZ7+kguqphHKhr1yY47lw9gCpEW3OaofsYzCo9JX3CU0FqW6pQRODlds6+HjZUBeQWf1pqv8utSEWTQbzZOZBMZqAwr0m3WGA1Iz193ZAGZTT/eGo9+SPeGJ4G+U1khHrSVndQ9p5N14ddeudNbdc/tActw2+tS6nLveaGYXhJYviJaRVNGeUlWZUE+bNieZHQN3SPdr4jqx4SB+MYeu9y/47z1A7iyS/R1NnGNQY3YjuLHXZ8B7lEmVQ+adw4ofPqoLHZygXJ7a2CJHE9gi7Sb8AGDLmGrMBAAA="
+    "Analytics": "v2:deflate64:H4sIAAAAAAAA/11QwW7CMAz9Fu7BY+WwXQfSJi4barUzCqmpUlIHxc4QivrvU1oKbKf3nu1nP7mA4mUBi5k+89zUx7mze0iVaHNUJbKPwaDSZ94lNAWk9YEqNDFYuXwEH08bagIyqz9F9X9KbYhFk8HcmXivGE1A4U6TbjBAqgZ9dQeUXjnd7Wu9I19jy/A5wHskI9aTsrqDVHo3bB1w6501lyzvbDq3Df5gXb663GlmFIa3DIqXkFbRHFFWmlGNNDuvbIT7wkc9JYT1gW65jG/Iiof0zRi23rvsuvGJrJ1FksfWWOl7NeSqRDeWmjzwFeUUpVf5DdDy009RwPMrLGYtWzsPkcR2COWIvx9ubmbQAQAA"
    },
    "Metadata": {
     "aws:cdk:path": "PedidosCanchaStack/CDKMetadata/Default"
@@ -781,6 +893,11 @@
   "FacturasInsumosBucketName": {
    "Value": {
     "Ref": "FacturasInsumosBucketF9033F68"
+   }
+  },
+  "FotosProductosBucketName": {
+   "Value": {
+    "Ref": "FotosProductosBucket7EFDE48C"
    }
   },
   "AppSecretArn": {

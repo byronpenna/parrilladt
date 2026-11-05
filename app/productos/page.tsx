@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { Fragment, useEffect, useMemo, useState } from 'react';
 import LogoutButton from '@/components/LogoutButton';
+import PreviewModal from './PreviewModal';
 import { gqlRequest } from '@/lib/graphql-client';
 import {
   QUERY_MENU_ADMIN,
@@ -35,6 +36,8 @@ export default function ProductosPage() {
   const [filtroCategoria, setFiltroCategoria] = useState(TODAS);
   const [filtroActivo, setFiltroActivo] = useState<'todos' | 'activos' | 'inactivos'>('todos');
   const [busqueda, setBusqueda] = useState('');
+
+  const [previewProducto, setPreviewProducto] = useState<MenuItem | null>(null);
 
   useEffect(() => {
     cargarProductos();
@@ -153,6 +156,10 @@ export default function ProductosPage() {
     } catch (e) {
       setErrorFila({ id: p.id, msg: e instanceof Error ? e.message : 'No se pudo eliminar' });
     }
+  }
+
+  function actualizarFotoPrincipal(menuItemId: string, url: string | null) {
+    setProductos((prev) => prev.map((p) => (p.id === menuItemId ? { ...p, fotoPrincipalUrl: url } : p)));
   }
 
   return (
@@ -324,6 +331,9 @@ export default function ProductosPage() {
                             </button>
                           </td>
                           <td className="acciones-productos">
+                            <button className="btn btn-blanco" onClick={() => setPreviewProducto(p)}>
+                              📷 Preview
+                            </button>
                             <button className="btn btn-blanco" onClick={() => iniciarEdicion(p)}>
                               Editar
                             </button>
@@ -349,6 +359,14 @@ export default function ProductosPage() {
           )}
         </div>
       </div>
+
+      {previewProducto && (
+        <PreviewModal
+          producto={previewProducto}
+          onClose={() => setPreviewProducto(null)}
+          onPrincipalChange={actualizarFotoPrincipal}
+        />
+      )}
     </>
   );
 }

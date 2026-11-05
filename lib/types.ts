@@ -7,6 +7,16 @@ export interface MenuItem {
   categoria: string;
   precio: number;
   activo: boolean;
+  fotoPrincipalUrl: string | null;
+}
+
+export interface FotoMenuItem {
+  id: string;
+  menuItemId: string;
+  key: string;
+  url: string;
+  principal: boolean;
+  createdAt: string;
 }
 
 export interface Cliente {

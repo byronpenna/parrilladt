@@ -162,6 +162,44 @@ export class PedidosCanchaStack extends cdk.Stack {
     });
     facturasBucket.grantReadWrite(amplifySsrRole);
 
+    // ── Fotos de productos del menú. A diferencia de las facturas, estas
+    // SÍ deben ser públicas: las muestra la página pública sin login. El
+    // admin de Next.js sigue siendo el único que sube/borra (URL firmada
+    // con este rol), pero la lectura es un GET directo sin firmar.
+    const fotosProductosBucket = new s3.Bucket(this, 'FotosProductosBucket', {
+      bucketName: 'pedidos-cancha-fotos-productos',
+      blockPublicAccess: new s3.BlockPublicAccess({
+        blockPublicAcls: true,
+        ignorePublicAcls: true,
+        blockPublicPolicy: false,
+        restrictPublicBuckets: false,
+      }),
+      encryption: s3.BucketEncryption.S3_MANAGED,
+      cors: [
+        {
+          allowedMethods: [s3.HttpMethods.PUT],
+          allowedOrigins: ['https://admin.parrilladeldt.com', 'http://localhost:3000'],
+          allowedHeaders: ['*'],
+        },
+      ],
+      removalPolicy: cdk.RemovalPolicy.RETAIN,
+    });
+    fotosProductosBucket.grantReadWrite(amplifySsrRole);
+    // la Lambda de GraphQL arma la URL pública de cada foto con esto
+    graphqlFn.addEnvironment(
+      'FOTOS_BUCKET_PUBLIC_URL',
+      `https://${fotosProductosBucket.bucketName}.s3.${cdk.Stack.of(this).region}.amazonaws.com`
+    );
+    fotosProductosBucket.addToResourcePolicy(
+      new iam.PolicyStatement({
+        sid: 'PublicRead',
+        effect: iam.Effect.ALLOW,
+        principals: [new iam.AnyPrincipal()],
+        actions: ['s3:GetObject'],
+        resources: [fotosProductosBucket.arnForObjects('*')],
+      })
+    );
+
     // ── Cognito: login de la app. Todas las páginas y /api/graphql exigen
     // una sesión; la sesión se arma a partir del IdToken que devuelve
     // InitiateAuth (USER_PASSWORD_AUTH), llamado desde el backend de
@@ -205,6 +243,7 @@ export class PedidosCanchaStack extends cdk.Stack {
     new cdk.CfnOutput(this, 'GraphqlFunctionArn', { value: graphqlFn.functionArn });
     new cdk.CfnOutput(this, 'AmplifySsrComputeRoleArn', { value: amplifySsrRole.roleArn });
     new cdk.CfnOutput(this, 'FacturasInsumosBucketName', { value: facturasBucket.bucketName });
+    new cdk.CfnOutput(this, 'FotosProductosBucketName', { value: fotosProductosBucket.bucketName });
     new cdk.CfnOutput(this, 'AppSecretArn', { value: appSecret.secretArn });
     new cdk.CfnOutput(this, 'DbEndpoint', { value: `${EXISTING_DB_ENDPOINT}:${EXISTING_DB_PORT}/${APP_DB_NAME}` });
 

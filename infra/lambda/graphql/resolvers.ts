@@ -115,8 +115,45 @@ async function fetchPedido(pool: Pool, id: string) {
   return shapePedido(res.rows[0]);
 }
 
-function shapeMenuItem(r: { id: string; nombre: string; categoria: string; precio: string | number; activo: boolean }) {
-  return { id: r.id, nombre: r.nombre, categoria: r.categoria, precio: Number(r.precio), activo: r.activo };
+const FOTOS_BUCKET_PUBLIC_URL = process.env.FOTOS_BUCKET_PUBLIC_URL || '';
+
+function fotoUrl(key: string) {
+  return `${FOTOS_BUCKET_PUBLIC_URL}/${key}`;
+}
+
+function shapeMenuItem(r: {
+  id: string;
+  nombre: string;
+  categoria: string;
+  precio: string | number;
+  activo: boolean;
+  foto_principal_key?: string | null;
+}) {
+  return {
+    id: r.id,
+    nombre: r.nombre,
+    categoria: r.categoria,
+    precio: Number(r.precio),
+    activo: r.activo,
+    fotoPrincipalUrl: r.foto_principal_key ? fotoUrl(r.foto_principal_key) : null,
+  };
+}
+
+function shapeFotoMenuItem(r: {
+  id: string;
+  menu_item_id: string;
+  foto_key: string;
+  principal: boolean;
+  created_at: Date;
+}) {
+  return {
+    id: r.id,
+    menuItemId: r.menu_item_id,
+    key: r.foto_key,
+    url: fotoUrl(r.foto_key),
+    principal: r.principal,
+    createdAt: new Date(r.created_at).toISOString(),
+  };
 }
 
 function shapeRider(r: { id: string; nombre: string; telefono: string | null; activo: boolean }) {
@@ -170,19 +207,33 @@ function shapeMovimientoInsumo(r: {
   };
 }
 
+const MENU_ITEM_SELECT = `
+  SELECT m.id, m.nombre, m.categoria, m.precio, m.activo,
+    (SELECT f.foto_key FROM menu_item_fotos f WHERE f.menu_item_id = m.id AND f.principal LIMIT 1) AS foto_principal_key
+  FROM menu_items m
+`;
+
 export const rootValue = {
   menu: async () => {
     const pool = await getPool();
-    const res = await pool.query(
-      'SELECT id, nombre, categoria, precio, activo FROM menu_items WHERE activo = true ORDER BY categoria, nombre'
-    );
+    const res = await pool.query(`${MENU_ITEM_SELECT} WHERE m.activo = true ORDER BY m.categoria, m.nombre`);
     return res.rows.map(shapeMenuItem);
   },
 
   menuAdmin: async () => {
     const pool = await getPool();
-    const res = await pool.query('SELECT id, nombre, categoria, precio, activo FROM menu_items ORDER BY categoria, nombre');
+    const res = await pool.query(`${MENU_ITEM_SELECT} ORDER BY m.categoria, m.nombre`);
     return res.rows.map(shapeMenuItem);
+  },
+
+  fotosMenuItem: async ({ menuItemId }: { menuItemId: string }) => {
+    const pool = await getPool();
+    const res = await pool.query(
+      `SELECT id, menu_item_id, foto_key, principal, created_at
+       FROM menu_item_fotos WHERE menu_item_id = $1 ORDER BY principal DESC, created_at ASC`,
+      [menuItemId]
+    );
+    return res.rows.map(shapeFotoMenuItem);
   },
 
   clientes: async () => {
@@ -518,7 +569,8 @@ export const rootValue = {
          precio = COALESCE($4, precio),
          activo = COALESCE($5, activo)
        WHERE id = $1
-       RETURNING id, nombre, categoria, precio, activo`,
+       RETURNING id, nombre, categoria, precio, activo,
+         (SELECT f.foto_key FROM menu_item_fotos f WHERE f.menu_item_id = menu_items.id AND f.principal LIMIT 1) AS foto_principal_key`,
       [id, nombre?.trim() ?? null, categoria?.trim() ?? null, precio ?? null, activo ?? null]
     );
     if (res.rowCount === 0) throw new Error(`Producto ${id} no encontrado`);
@@ -528,6 +580,75 @@ export const rootValue = {
   eliminarProductoMenu: async ({ id }: { id: string }) => {
     const pool = await getPool();
     const res = await pool.query('DELETE FROM menu_items WHERE id = $1', [id]);
+    return (res.rowCount ?? 0) > 0;
+  },
+
+  agregarFotoMenuItem: async ({
+    menuItemId,
+    key,
+    principal,
+  }: {
+    menuItemId: string;
+    key: string;
+    principal?: boolean;
+  }) => {
+    const pool = await getPool();
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+      // la primera foto de un producto queda como principal por defecto,
+      // salvo que ya exista una (en ese caso solo se vuelve principal si se pide)
+      const existente = await client.query(
+        'SELECT 1 FROM menu_item_fotos WHERE menu_item_id = $1 AND principal',
+        [menuItemId]
+      );
+      const esPrincipal = principal ?? existente.rowCount === 0;
+      if (esPrincipal) {
+        await client.query('UPDATE menu_item_fotos SET principal = false WHERE menu_item_id = $1', [menuItemId]);
+      }
+      const res = await client.query(
+        `INSERT INTO menu_item_fotos (menu_item_id, foto_key, principal)
+         VALUES ($1, $2, $3)
+         RETURNING id, menu_item_id, foto_key, principal, created_at`,
+        [menuItemId, key, esPrincipal]
+      );
+      await client.query('COMMIT');
+      return shapeFotoMenuItem(res.rows[0]);
+    } catch (err) {
+      await client.query('ROLLBACK');
+      throw err;
+    } finally {
+      client.release();
+    }
+  },
+
+  marcarFotoPrincipal: async ({ id }: { id: string }) => {
+    const pool = await getPool();
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+      const fotoRes = await client.query('SELECT menu_item_id FROM menu_item_fotos WHERE id = $1', [id]);
+      if (fotoRes.rowCount === 0) throw new Error(`Foto ${id} no encontrada`);
+      const menuItemId = fotoRes.rows[0].menu_item_id;
+      await client.query('UPDATE menu_item_fotos SET principal = false WHERE menu_item_id = $1', [menuItemId]);
+      const res = await client.query(
+        `UPDATE menu_item_fotos SET principal = true WHERE id = $1
+         RETURNING id, menu_item_id, foto_key, principal, created_at`,
+        [id]
+      );
+      await client.query('COMMIT');
+      return shapeFotoMenuItem(res.rows[0]);
+    } catch (err) {
+      await client.query('ROLLBACK');
+      throw err;
+    } finally {
+      client.release();
+    }
+  },
+
+  eliminarFotoMenuItem: async ({ id }: { id: string }) => {
+    const pool = await getPool();
+    const res = await pool.query('DELETE FROM menu_item_fotos WHERE id = $1', [id]);
     return (res.rowCount ?? 0) > 0;
   },
 

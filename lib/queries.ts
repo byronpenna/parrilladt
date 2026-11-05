@@ -1,9 +1,9 @@
 export const QUERY_MENU = `
-  query { menu { id nombre categoria precio activo } }
+  query { menu { id nombre categoria precio activo fotoPrincipalUrl } }
 `;
 
 export const QUERY_MENU_ADMIN = `
-  query { menuAdmin { id nombre categoria precio activo } }
+  query { menuAdmin { id nombre categoria precio activo fotoPrincipalUrl } }
 `;
 
 export const QUERY_CLIENTES = `
@@ -170,7 +170,7 @@ export const MUTATION_ELIMINAR_CLIENTE = `
 export const MUTATION_CREAR_PRODUCTO = `
   mutation CrearProducto($nombre: String!, $categoria: String!, $precio: Float!) {
     crearProductoMenu(nombre: $nombre, categoria: $categoria, precio: $precio) {
-      id nombre categoria precio activo
+      id nombre categoria precio activo fotoPrincipalUrl
     }
   }
 `;
@@ -178,7 +178,7 @@ export const MUTATION_CREAR_PRODUCTO = `
 export const MUTATION_ACTUALIZAR_PRODUCTO = `
   mutation ActualizarProducto($id: ID!, $nombre: String, $categoria: String, $precio: Float, $activo: Boolean) {
     actualizarProductoMenu(id: $id, nombre: $nombre, categoria: $categoria, precio: $precio, activo: $activo) {
-      id nombre categoria precio activo
+      id nombre categoria precio activo fotoPrincipalUrl
     }
   }
 `;
@@ -186,6 +186,36 @@ export const MUTATION_ACTUALIZAR_PRODUCTO = `
 export const MUTATION_ELIMINAR_PRODUCTO = `
   mutation EliminarProducto($id: ID!) {
     eliminarProductoMenu(id: $id)
+  }
+`;
+
+export const QUERY_FOTOS_MENU_ITEM = `
+  query FotosMenuItem($menuItemId: ID!) {
+    fotosMenuItem(menuItemId: $menuItemId) {
+      id menuItemId key url principal createdAt
+    }
+  }
+`;
+
+export const MUTATION_AGREGAR_FOTO_MENU_ITEM = `
+  mutation AgregarFotoMenuItem($menuItemId: ID!, $key: String!, $principal: Boolean) {
+    agregarFotoMenuItem(menuItemId: $menuItemId, key: $key, principal: $principal) {
+      id menuItemId key url principal createdAt
+    }
+  }
+`;
+
+export const MUTATION_MARCAR_FOTO_PRINCIPAL = `
+  mutation MarcarFotoPrincipal($id: ID!) {
+    marcarFotoPrincipal(id: $id) {
+      id menuItemId key url principal createdAt
+    }
+  }
+`;
+
+export const MUTATION_ELIMINAR_FOTO_MENU_ITEM = `
+  mutation EliminarFotoMenuItem($id: ID!) {
+    eliminarFotoMenuItem(id: $id)
   }
 `;
 
