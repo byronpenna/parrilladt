@@ -34,13 +34,33 @@ export type MenuItem = {
   categoria: string;
   precio: number;
   activo: boolean;
+  fotoPrincipalUrl: string | null;
 };
 
 export async function obtenerMenu(): Promise<MenuItem[]> {
   const data = await invocarGraphQL<{ menu: MenuItem[] }>(`
-    query { menu { id nombre categoria precio activo } }
+    query { menu { id nombre categoria precio activo fotoPrincipalUrl } }
   `);
   return data.menu;
+}
+
+export type FotoMenuItem = {
+  id: string;
+  menuItemId: string;
+  url: string;
+  principal: boolean;
+};
+
+export async function obtenerFotosMenuItem(menuItemId: string): Promise<FotoMenuItem[]> {
+  const data = await invocarGraphQL<{ fotosMenuItem: FotoMenuItem[] }>(
+    `
+    query FotosMenuItem($menuItemId: ID!) {
+      fotosMenuItem(menuItemId: $menuItemId) { id menuItemId url principal }
+    }
+  `,
+    { menuItemId }
+  );
+  return data.fotosMenuItem;
 }
 
 export type ItemPedidoInput = {

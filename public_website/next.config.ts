@@ -7,6 +7,14 @@ const nextConfig: NextConfig = {
   turbopack: {
     root: path.join(__dirname),
   },
+  images: {
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: 'pedidos-cancha-fotos-productos.s3.*.amazonaws.com',
+      },
+    ],
+  },
 };
 
 export default nextConfig;
