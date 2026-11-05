@@ -44,20 +44,47 @@ CREATE UNIQUE INDEX IF NOT EXISTS menu_items_nombre_unique ON menu_items (nombre
 CREATE INDEX IF NOT EXISTS menu_items_activo_idx ON menu_items (activo);
 
 -- ── Stock / insumos ─────────────────────────────────────────────────────
+-- stock_actual no se edita directo: lo mantiene al día el trigger de
+-- insumo_movimientos (ver más abajo), para que cada cambio quede en el
+-- histórico de cargas/descargas en vez de perderse en un UPDATE suelto.
 CREATE TABLE IF NOT EXISTS insumos (
-    id            BIGSERIAL PRIMARY KEY,
-    nombre        TEXT NOT NULL,
-    unidad        TEXT NOT NULL DEFAULT 'unidad',
-    stock_actual  NUMERIC(12,2) NOT NULL DEFAULT 0 CHECK (stock_actual >= 0),
-    stock_minimo  NUMERIC(12,2) NOT NULL DEFAULT 0 CHECK (stock_minimo >= 0),
-    stock_ideal   NUMERIC(12,2) NOT NULL DEFAULT 0 CHECK (stock_ideal >= 0),
-    activo        BOOLEAN NOT NULL DEFAULT true,
-    created_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
-    updated_at    TIMESTAMPTZ NOT NULL DEFAULT now()
+    id                BIGSERIAL PRIMARY KEY,
+    nombre            TEXT NOT NULL,
+    unidad            TEXT NOT NULL DEFAULT 'unidad',
+    stock_actual      NUMERIC(12,2) NOT NULL DEFAULT 0 CHECK (stock_actual >= 0),
+    stock_minimo      NUMERIC(12,2) NOT NULL DEFAULT 0 CHECK (stock_minimo >= 0),
+    stock_ideal       NUMERIC(12,2) NOT NULL DEFAULT 0 CHECK (stock_ideal >= 0),
+    precio_referencia NUMERIC(12,2) NOT NULL DEFAULT 0 CHECK (precio_referencia >= 0),
+    activo            BOOLEAN NOT NULL DEFAULT true,
+    created_at        TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at        TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+
+-- insumos ya existía sin esta columna en instalaciones previas
+ALTER TABLE insumos ADD COLUMN IF NOT EXISTS precio_referencia NUMERIC(12,2) NOT NULL DEFAULT 0 CHECK (precio_referencia >= 0);
 
 CREATE UNIQUE INDEX IF NOT EXISTS insumos_nombre_unique ON insumos (lower(trim(nombre)));
 CREATE INDEX IF NOT EXISTS insumos_activo_idx ON insumos (activo);
+
+-- ── Histórico de cargas/descargas de insumos ───────────────────────────
+DO $$ BEGIN
+    CREATE TYPE tipo_movimiento_insumo AS ENUM ('carga', 'descarga');
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
+CREATE TABLE IF NOT EXISTS insumo_movimientos (
+    id              BIGSERIAL PRIMARY KEY,
+    insumo_id       BIGINT NOT NULL REFERENCES insumos(id) ON DELETE CASCADE,
+    tipo            tipo_movimiento_insumo NOT NULL,
+    cantidad        NUMERIC(12,2) NOT NULL CHECK (cantidad > 0),
+    precio_unitario NUMERIC(12,2) NOT NULL DEFAULT 0 CHECK (precio_unitario >= 0),
+    factura_key     TEXT,            -- objeto en S3 con la factura (solo cargas), opcional
+    nota            TEXT,
+    created_at      TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS insumo_movimientos_insumo_id_idx ON insumo_movimientos (insumo_id);
+CREATE INDEX IF NOT EXISTS insumo_movimientos_created_at_idx ON insumo_movimientos (created_at);
 
 -- ── Pedidos ─────────────────────────────────────────────────────────────
 DO $$ BEGIN
@@ -178,6 +205,24 @@ $$ LANGUAGE plpgsql;
 CREATE OR REPLACE TRIGGER pedido_items_recalcular_total
     AFTER INSERT OR UPDATE OR DELETE ON pedido_items
     FOR EACH ROW EXECUTE FUNCTION recalcular_total_pedido();
+
+CREATE OR REPLACE FUNCTION recalcular_stock_insumo()
+RETURNS TRIGGER AS $$
+BEGIN
+    UPDATE insumos
+    SET stock_actual = COALESCE((
+        SELECT SUM(CASE WHEN tipo = 'carga' THEN cantidad ELSE -cantidad END)
+        FROM insumo_movimientos
+        WHERE insumo_id = COALESCE(NEW.insumo_id, OLD.insumo_id)
+    ), 0)
+    WHERE id = COALESCE(NEW.insumo_id, OLD.insumo_id);
+    RETURN NULL;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE OR REPLACE TRIGGER insumo_movimientos_recalcular_stock
+    AFTER INSERT OR UPDATE OR DELETE ON insumo_movimientos
+    FOR EACH ROW EXECUTE FUNCTION recalcular_stock_insumo();
 
 -- ── seed del menú actual ───────────────────────────────────────────────
 INSERT INTO menu_items (nombre, categoria, precio) VALUES

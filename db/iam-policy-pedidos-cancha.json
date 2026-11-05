@@ -67,6 +67,12 @@
       ]
     },
     {
+      "Sid": "FacturasInsumosLocalDev",
+      "Effect": "Allow",
+      "Action": ["s3:PutObject", "s3:GetObject"],
+      "Resource": "arn:aws:s3:::pedidos-cancha-facturas-insumos/*"
+    },
+    {
       "Sid": "PassAmplifySsrComputeRole",
       "Effect": "Allow",
       "Action": "iam:PassRole",

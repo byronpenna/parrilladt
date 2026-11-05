@@ -83,8 +83,25 @@ export const schema = buildSchema(`
     stockActual: Float!
     stockMinimo: Float!
     stockIdeal: Float!
+    precioReferencia: Float!
     activo: Boolean!
     bajoMinimo: Boolean!
+  }
+
+  enum TipoMovimientoInsumo {
+    carga
+    descarga
+  }
+
+  type MovimientoInsumo {
+    id: ID!
+    insumoId: ID!
+    tipo: TipoMovimientoInsumo!
+    cantidad: Float!
+    precioUnitario: Float!
+    facturaKey: String
+    nota: String
+    createdAt: String!
   }
 
   type Query {
@@ -96,6 +113,7 @@ export const schema = buildSchema(`
     pedidos(soloActivos: Boolean): [Pedido!]!
     configNegocio: ConfigNegocio
     insumos: [Insumo!]!
+    movimientosInsumo(insumoId: ID!): [MovimientoInsumo!]!
   }
 
   input ItemInput {
@@ -154,19 +172,27 @@ export const schema = buildSchema(`
     crearInsumo(
       nombre: String!
       unidad: String!
-      stockActual: Float
       stockMinimo: Float
       stockIdeal: Float
+      precioReferencia: Float
     ): Insumo!
     actualizarInsumo(
       id: ID!
       nombre: String
       unidad: String
-      stockActual: Float
       stockMinimo: Float
       stockIdeal: Float
+      precioReferencia: Float
       activo: Boolean
     ): Insumo!
     eliminarInsumo(id: ID!): Boolean!
+    registrarMovimientoInsumo(
+      insumoId: ID!
+      tipo: TipoMovimientoInsumo!
+      cantidad: Float!
+      precioUnitario: Float
+      facturaKey: String
+      nota: String
+    ): MovimientoInsumo!
   }
 `);

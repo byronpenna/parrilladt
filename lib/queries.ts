@@ -212,13 +212,13 @@ export const MUTATION_ELIMINAR_RIDER = `
 `;
 
 export const QUERY_INSUMOS = `
-  query { insumos { id nombre unidad stockActual stockMinimo stockIdeal activo bajoMinimo } }
+  query { insumos { id nombre unidad stockActual stockMinimo stockIdeal precioReferencia activo bajoMinimo } }
 `;
 
 export const MUTATION_CREAR_INSUMO = `
-  mutation CrearInsumo($nombre: String!, $unidad: String!, $stockActual: Float, $stockMinimo: Float, $stockIdeal: Float) {
-    crearInsumo(nombre: $nombre, unidad: $unidad, stockActual: $stockActual, stockMinimo: $stockMinimo, stockIdeal: $stockIdeal) {
-      id nombre unidad stockActual stockMinimo stockIdeal activo bajoMinimo
+  mutation CrearInsumo($nombre: String!, $unidad: String!, $stockMinimo: Float, $stockIdeal: Float, $precioReferencia: Float) {
+    crearInsumo(nombre: $nombre, unidad: $unidad, stockMinimo: $stockMinimo, stockIdeal: $stockIdeal, precioReferencia: $precioReferencia) {
+      id nombre unidad stockActual stockMinimo stockIdeal precioReferencia activo bajoMinimo
     }
   }
 `;
@@ -228,21 +228,21 @@ export const MUTATION_ACTUALIZAR_INSUMO = `
     $id: ID!
     $nombre: String
     $unidad: String
-    $stockActual: Float
     $stockMinimo: Float
     $stockIdeal: Float
+    $precioReferencia: Float
     $activo: Boolean
   ) {
     actualizarInsumo(
       id: $id
       nombre: $nombre
       unidad: $unidad
-      stockActual: $stockActual
       stockMinimo: $stockMinimo
       stockIdeal: $stockIdeal
+      precioReferencia: $precioReferencia
       activo: $activo
     ) {
-      id nombre unidad stockActual stockMinimo stockIdeal activo bajoMinimo
+      id nombre unidad stockActual stockMinimo stockIdeal precioReferencia activo bajoMinimo
     }
   }
 `;
@@ -250,5 +250,35 @@ export const MUTATION_ACTUALIZAR_INSUMO = `
 export const MUTATION_ELIMINAR_INSUMO = `
   mutation EliminarInsumo($id: ID!) {
     eliminarInsumo(id: $id)
+  }
+`;
+
+export const QUERY_MOVIMIENTOS_INSUMO = `
+  query MovimientosInsumo($insumoId: ID!) {
+    movimientosInsumo(insumoId: $insumoId) {
+      id insumoId tipo cantidad precioUnitario facturaKey nota createdAt
+    }
+  }
+`;
+
+export const MUTATION_REGISTRAR_MOVIMIENTO_INSUMO = `
+  mutation RegistrarMovimientoInsumo(
+    $insumoId: ID!
+    $tipo: TipoMovimientoInsumo!
+    $cantidad: Float!
+    $precioUnitario: Float
+    $facturaKey: String
+    $nota: String
+  ) {
+    registrarMovimientoInsumo(
+      insumoId: $insumoId
+      tipo: $tipo
+      cantidad: $cantidad
+      precioUnitario: $precioUnitario
+      facturaKey: $facturaKey
+      nota: $nota
+    ) {
+      id insumoId tipo cantidad precioUnitario facturaKey nota createdAt
+    }
   }
 `;

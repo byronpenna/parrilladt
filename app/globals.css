@@ -449,6 +449,22 @@ html, body {
   border-radius: 999px;
   margin-left: 8px;
 }
+
+.ayuda-stock { color: #666; font-size: 0.85rem; margin: -6px 0 14px; }
+
+.panel-movimiento {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 12px;
+  background: #f7f7f7;
+  border-radius: 10px;
+  padding: 14px;
+}
+.panel-movimiento > strong { width: 100%; color: var(--verde-oscuro); }
+
+.tabla-historico { margin: 4px 0; }
+.tabla-historico th, .tabla-historico td { padding: 6px 10px; font-size: 0.9rem; }
 .acciones-productos { display: flex; gap: 8px; flex-wrap: wrap; }
 .acciones-productos .btn { padding: 8px 12px; font-size: 0.85rem; }
 .tabla-pedidos td input,

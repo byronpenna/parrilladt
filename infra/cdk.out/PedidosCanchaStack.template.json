@@ -156,7 +156,7 @@
    "Properties": {
     "Code": {
      "S3Bucket": "cdk-hnb659fds-assets-861418247819-us-east-1",
-     "S3Key": "06f7936e7167c4a0ada7516d03b0802cfc8e47f8ab5f4cfb3b592a4e1f84e40d.zip"
+     "S3Key": "9d5a052004309adab44d7bdb640c82764d736396fdb5bff35f1fd7ef9e2c247a.zip"
     },
     "Environment": {
      "Variables": {
@@ -202,7 +202,7 @@
    ],
    "Metadata": {
     "aws:cdk:path": "PedidosCanchaStack/MigrateFn/Resource",
-    "aws:asset:path": "asset.06f7936e7167c4a0ada7516d03b0802cfc8e47f8ab5f4cfb3b592a4e1f84e40d",
+    "aws:asset:path": "asset.9d5a052004309adab44d7bdb640c82764d736396fdb5bff35f1fd7ef9e2c247a",
     "aws:asset:is-bundled": true,
     "aws:asset:property": "Code"
    }
@@ -287,7 +287,7 @@
    "Properties": {
     "Code": {
      "S3Bucket": "cdk-hnb659fds-assets-861418247819-us-east-1",
-     "S3Key": "620502a4b1e7c8529b6080c96ae367b124a9dddf83af602c304e2448a7482bec.zip"
+     "S3Key": "ac64df58173726fa01f12fa381db75735f5a2fdff02687de076a55dba4cd568f.zip"
     },
     "Environment": {
      "Variables": {
@@ -332,7 +332,7 @@
    ],
    "Metadata": {
     "aws:cdk:path": "PedidosCanchaStack/GraphqlFn/Resource",
-    "aws:asset:path": "asset.620502a4b1e7c8529b6080c96ae367b124a9dddf83af602c304e2448a7482bec",
+    "aws:asset:path": "asset.ac64df58173726fa01f12fa381db75735f5a2fdff02687de076a55dba4cd568f",
     "aws:asset:is-bundled": true,
     "aws:asset:property": "Code"
    }
@@ -389,6 +389,43 @@
          ]
         }
        ]
+      },
+      {
+       "Action": [
+        "s3:Abort*",
+        "s3:DeleteObject*",
+        "s3:GetBucket*",
+        "s3:GetObject*",
+        "s3:List*",
+        "s3:PutObject",
+        "s3:PutObjectLegalHold",
+        "s3:PutObjectRetention",
+        "s3:PutObjectTagging",
+        "s3:PutObjectVersionTagging"
+       ],
+       "Effect": "Allow",
+       "Resource": [
+        {
+         "Fn::GetAtt": [
+          "FacturasInsumosBucketF9033F68",
+          "Arn"
+         ]
+        },
+        {
+         "Fn::Join": [
+          "",
+          [
+           {
+            "Fn::GetAtt": [
+             "FacturasInsumosBucketF9033F68",
+             "Arn"
+            ]
+           },
+           "/*"
+          ]
+         ]
+        }
+       ]
       }
      ],
      "Version": "2012-10-17"
@@ -402,6 +439,48 @@
    },
    "Metadata": {
     "aws:cdk:path": "PedidosCanchaStack/AmplifySsrComputeRole/DefaultPolicy/Resource"
+   }
+  },
+  "FacturasInsumosBucketF9033F68": {
+   "Type": "AWS::S3::Bucket",
+   "Properties": {
+    "BucketEncryption": {
+     "ServerSideEncryptionConfiguration": [
+      {
+       "ServerSideEncryptionByDefault": {
+        "SSEAlgorithm": "AES256"
+       }
+      }
+     ]
+    },
+    "BucketName": "pedidos-cancha-facturas-insumos",
+    "CorsConfiguration": {
+     "CorsRules": [
+      {
+       "AllowedHeaders": [
+        "*"
+       ],
+       "AllowedMethods": [
+        "PUT"
+       ],
+       "AllowedOrigins": [
+        "https://admin.parrilladeldt.com",
+        "http://localhost:3000"
+       ]
+      }
+     ]
+    },
+    "PublicAccessBlockConfiguration": {
+     "BlockPublicAcls": true,
+     "BlockPublicPolicy": true,
+     "IgnorePublicAcls": true,
+     "RestrictPublicBuckets": true
+    }
+   },
+   "UpdateReplacePolicy": "Retain",
+   "DeletionPolicy": "Retain",
+   "Metadata": {
+    "aws:cdk:path": "PedidosCanchaStack/FacturasInsumosBucket/Resource"
    }
   },
   "UserPool6BA7E5F2": {
@@ -655,7 +734,7 @@
   "CDKMetadata": {
    "Type": "AWS::CDK::Metadata",
    "Properties": {
-    "Analytics": "v2:deflate64:H4sIAAAAAAAA/12Py27CMBBFv4W9maZh0W5LpFZsWkTUdWScSWRwxsgzLkJW/r1yIPSxunde92hKKJ8KKBb6zEvTHpfO7iHVos1R7ZB9DAaVPnOT0JSQqo5qNDFYubwFH08b6gMyqz9N9X9LbYhFk8E8mf2oGE1A4UGT7jFAqqf6dh1QRuX0sG91Q77FA8P7JK+RjFhPyuoB0s67KXXSrXfWXHL542bcNvjOukxdNZoZheEli+IVrKM5oqw1440IVUd3jvE9WfGQPhnD1nuXY+9+NpWzSPJ7dO2Mo5o4tejeUp8XPqKcoowqvwUHfvgqS3h8hmJxYGuXIZLYAWF31W9pjTnMoAEAAA=="
+    "Analytics": "v2:deflate64:H4sIAAAAAAAA/12PT2/CMAzFPwv31OvKYbuOSkNcNkS1MwrBrQKpg2JnCEX97lPalf05vZ/tZ7+kguqphHKhr1yY47lw9gCpEW3OaofsYzCo9JX3CU0FqW6pQRODlds6+HjZUBeQWf1pqv8utSEWTQbzZOZBMZqAwr0m3WGA1Iz193ZAGZTT/eGo9+SPeGJ4G+U1khHrSVndQ9p5N14ddeudNbdc/tActw2+tS6nLveaGYXhJYviJaRVNGeUlWZUE+bNieZHQN3SPdr4jqx4SB+MYeu9y/47z1A7iyS/R1NnGNQY3YjuLHXZ8B7lEmVQ+adw4ofPqoLHZygXJ7a2CJHE9gi7Sb8AGDLmGrMBAAA="
    },
    "Metadata": {
     "aws:cdk:path": "PedidosCanchaStack/CDKMetadata/Default"
@@ -697,6 +776,11 @@
      "AmplifySsrComputeRoleFB63CA7A",
      "Arn"
     ]
+   }
+  },
+  "FacturasInsumosBucketName": {
+   "Value": {
+    "Ref": "FacturasInsumosBucketF9033F68"
    }
   },
   "AppSecretArn": {

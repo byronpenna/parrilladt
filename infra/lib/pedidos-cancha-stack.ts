@@ -3,6 +3,7 @@ import * as cognito from 'aws-cdk-lib/aws-cognito';
 import * as ec2 from 'aws-cdk-lib/aws-ec2';
 import * as iam from 'aws-cdk-lib/aws-iam';
 import * as rds from 'aws-cdk-lib/aws-rds';
+import * as s3 from 'aws-cdk-lib/aws-s3';
 import * as secretsmanager from 'aws-cdk-lib/aws-secretsmanager';
 import { NodejsFunction } from 'aws-cdk-lib/aws-lambda-nodejs';
 import * as lambda from 'aws-cdk-lib/aws-lambda';
@@ -142,6 +143,25 @@ export class PedidosCanchaStack extends cdk.Stack {
     });
     graphqlFn.grantInvoke(amplifySsrRole);
 
+    // ── Facturas de insumos (PDF, opcional en cada carga de stock).
+    // Privado: el admin de Next.js genera URLs firmadas (subida y lectura)
+    // con este mismo rol de cómputo; la Lambda de GraphQL solo guarda el
+    // S3 key en insumo_movimientos, nunca toca el bucket.
+    const facturasBucket = new s3.Bucket(this, 'FacturasInsumosBucket', {
+      bucketName: 'pedidos-cancha-facturas-insumos',
+      blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL,
+      encryption: s3.BucketEncryption.S3_MANAGED,
+      cors: [
+        {
+          allowedMethods: [s3.HttpMethods.PUT],
+          allowedOrigins: ['https://admin.parrilladeldt.com', 'http://localhost:3000'],
+          allowedHeaders: ['*'],
+        },
+      ],
+      removalPolicy: cdk.RemovalPolicy.RETAIN,
+    });
+    facturasBucket.grantReadWrite(amplifySsrRole);
+
     // ── Cognito: login de la app. Todas las páginas y /api/graphql exigen
     // una sesión; la sesión se arma a partir del IdToken que devuelve
     // InitiateAuth (USER_PASSWORD_AUTH), llamado desde el backend de
@@ -184,6 +204,7 @@ export class PedidosCanchaStack extends cdk.Stack {
     new cdk.CfnOutput(this, 'GraphqlFunctionName', { value: graphqlFn.functionName });
     new cdk.CfnOutput(this, 'GraphqlFunctionArn', { value: graphqlFn.functionArn });
     new cdk.CfnOutput(this, 'AmplifySsrComputeRoleArn', { value: amplifySsrRole.roleArn });
+    new cdk.CfnOutput(this, 'FacturasInsumosBucketName', { value: facturasBucket.bucketName });
     new cdk.CfnOutput(this, 'AppSecretArn', { value: appSecret.secretArn });
     new cdk.CfnOutput(this, 'DbEndpoint', { value: `${EXISTING_DB_ENDPOINT}:${EXISTING_DB_PORT}/${APP_DB_NAME}` });
 

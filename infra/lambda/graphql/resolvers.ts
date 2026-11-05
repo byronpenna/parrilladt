@@ -130,6 +130,7 @@ function shapeInsumo(r: {
   stock_actual: string | number;
   stock_minimo: string | number;
   stock_ideal: string | number;
+  precio_referencia: string | number;
   activo: boolean;
 }) {
   const stockActual = Number(r.stock_actual);
@@ -141,8 +142,31 @@ function shapeInsumo(r: {
     stockActual,
     stockMinimo,
     stockIdeal: Number(r.stock_ideal),
+    precioReferencia: Number(r.precio_referencia),
     activo: r.activo,
     bajoMinimo: stockActual < stockMinimo,
+  };
+}
+
+function shapeMovimientoInsumo(r: {
+  id: string;
+  insumo_id: string;
+  tipo: string;
+  cantidad: string | number;
+  precio_unitario: string | number;
+  factura_key: string | null;
+  nota: string | null;
+  created_at: Date;
+}) {
+  return {
+    id: r.id,
+    insumoId: r.insumo_id,
+    tipo: r.tipo,
+    cantidad: Number(r.cantidad),
+    precioUnitario: Number(r.precio_unitario),
+    facturaKey: r.factura_key,
+    nota: r.nota,
+    createdAt: new Date(r.created_at).toISOString(),
   };
 }
 
@@ -184,9 +208,19 @@ export const rootValue = {
   insumos: async () => {
     const pool = await getPool();
     const res = await pool.query(
-      'SELECT id, nombre, unidad, stock_actual, stock_minimo, stock_ideal, activo FROM insumos ORDER BY nombre'
+      'SELECT id, nombre, unidad, stock_actual, stock_minimo, stock_ideal, precio_referencia, activo FROM insumos ORDER BY nombre'
     );
     return res.rows.map(shapeInsumo);
+  },
+
+  movimientosInsumo: async ({ insumoId }: { insumoId: string }) => {
+    const pool = await getPool();
+    const res = await pool.query(
+      `SELECT id, insumo_id, tipo, cantidad, precio_unitario, factura_key, nota, created_at
+       FROM insumo_movimientos WHERE insumo_id = $1 ORDER BY created_at DESC`,
+      [insumoId]
+    );
+    return res.rows.map(shapeMovimientoInsumo);
   },
 
   configNegocio: async () => {
@@ -548,23 +582,23 @@ export const rootValue = {
   crearInsumo: async ({
     nombre,
     unidad,
-    stockActual,
     stockMinimo,
     stockIdeal,
+    precioReferencia,
   }: {
     nombre: string;
     unidad: string;
-    stockActual?: number;
     stockMinimo?: number;
     stockIdeal?: number;
+    precioReferencia?: number;
   }) => {
     const pool = await getPool();
     try {
       const res = await pool.query(
-        `INSERT INTO insumos (nombre, unidad, stock_actual, stock_minimo, stock_ideal)
+        `INSERT INTO insumos (nombre, unidad, stock_minimo, stock_ideal, precio_referencia)
          VALUES ($1, $2, $3, $4, $5)
-         RETURNING id, nombre, unidad, stock_actual, stock_minimo, stock_ideal, activo`,
-        [nombre.trim(), unidad.trim(), stockActual ?? 0, stockMinimo ?? 0, stockIdeal ?? 0]
+         RETURNING id, nombre, unidad, stock_actual, stock_minimo, stock_ideal, precio_referencia, activo`,
+        [nombre.trim(), unidad.trim(), stockMinimo ?? 0, stockIdeal ?? 0, precioReferencia ?? 0]
       );
       return shapeInsumo(res.rows[0]);
     } catch (err: unknown) {
@@ -579,17 +613,17 @@ export const rootValue = {
     id,
     nombre,
     unidad,
-    stockActual,
     stockMinimo,
     stockIdeal,
+    precioReferencia,
     activo,
   }: {
     id: string;
     nombre?: string;
     unidad?: string;
-    stockActual?: number;
     stockMinimo?: number;
     stockIdeal?: number;
+    precioReferencia?: number;
     activo?: boolean;
   }) => {
     const pool = await getPool();
@@ -597,19 +631,19 @@ export const rootValue = {
       `UPDATE insumos SET
          nombre = COALESCE($2, nombre),
          unidad = COALESCE($3, unidad),
-         stock_actual = COALESCE($4, stock_actual),
-         stock_minimo = COALESCE($5, stock_minimo),
-         stock_ideal = COALESCE($6, stock_ideal),
+         stock_minimo = COALESCE($4, stock_minimo),
+         stock_ideal = COALESCE($5, stock_ideal),
+         precio_referencia = COALESCE($6, precio_referencia),
          activo = COALESCE($7, activo)
        WHERE id = $1
-       RETURNING id, nombre, unidad, stock_actual, stock_minimo, stock_ideal, activo`,
+       RETURNING id, nombre, unidad, stock_actual, stock_minimo, stock_ideal, precio_referencia, activo`,
       [
         id,
         nombre?.trim() ?? null,
         unidad?.trim() ?? null,
-        stockActual ?? null,
         stockMinimo ?? null,
         stockIdeal ?? null,
+        precioReferencia ?? null,
         activo ?? null,
       ]
     );
@@ -621,6 +655,49 @@ export const rootValue = {
     const pool = await getPool();
     const res = await pool.query('DELETE FROM insumos WHERE id = $1', [id]);
     return (res.rowCount ?? 0) > 0;
+  },
+
+  registrarMovimientoInsumo: async ({
+    insumoId,
+    tipo,
+    cantidad,
+    precioUnitario,
+    facturaKey,
+    nota,
+  }: {
+    insumoId: string;
+    tipo: 'carga' | 'descarga';
+    cantidad: number;
+    precioUnitario?: number;
+    facturaKey?: string;
+    nota?: string;
+  }) => {
+    if (cantidad <= 0) throw new Error('La cantidad debe ser mayor a 0');
+    const pool = await getPool();
+
+    // en una carga, si no mandan precio se usa el de referencia del insumo
+    let precio = precioUnitario;
+    if (tipo === 'carga' && precio === undefined) {
+      const insumoRes = await pool.query('SELECT precio_referencia FROM insumos WHERE id = $1', [insumoId]);
+      if (insumoRes.rowCount === 0) throw new Error(`Insumo ${insumoId} no encontrado`);
+      precio = Number(insumoRes.rows[0].precio_referencia);
+    }
+
+    try {
+      const res = await pool.query(
+        `INSERT INTO insumo_movimientos (insumo_id, tipo, cantidad, precio_unitario, factura_key, nota)
+         VALUES ($1, $2, $3, $4, $5, $6)
+         RETURNING id, insumo_id, tipo, cantidad, precio_unitario, factura_key, nota, created_at`,
+        [insumoId, tipo, cantidad, precio ?? 0, facturaKey || null, nota || null]
+      );
+      return shapeMovimientoInsumo(res.rows[0]);
+    } catch (err: unknown) {
+      // CHECK stock_actual >= 0 del trigger: una descarga mayor al stock disponible
+      if (err && typeof err === 'object' && 'code' in err && (err as { code: string }).code === '23514') {
+        throw new Error('No hay suficiente stock para esa descarga');
+      }
+      throw err;
+    }
   },
 
   actualizarConfigNegocio: async ({

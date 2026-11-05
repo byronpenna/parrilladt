@@ -9,8 +9,10 @@ import {
   MUTATION_CREAR_INSUMO,
   MUTATION_ACTUALIZAR_INSUMO,
   MUTATION_ELIMINAR_INSUMO,
+  QUERY_MOVIMIENTOS_INSUMO,
+  MUTATION_REGISTRAR_MOVIMIENTO_INSUMO,
 } from '@/lib/queries';
-import type { Insumo } from '@/lib/types';
+import type { Insumo, MovimientoInsumo, TipoMovimientoInsumo } from '@/lib/types';
 
 export default function StockPage() {
   const [insumos, setInsumos] = useState<Insumo[]>([]);
@@ -19,23 +21,37 @@ export default function StockPage() {
 
   const [nuevoNombre, setNuevoNombre] = useState('');
   const [nuevoUnidad, setNuevoUnidad] = useState('');
-  const [nuevoStockActual, setNuevoStockActual] = useState('');
   const [nuevoStockMinimo, setNuevoStockMinimo] = useState('');
   const [nuevoStockIdeal, setNuevoStockIdeal] = useState('');
+  const [nuevoPrecioReferencia, setNuevoPrecioReferencia] = useState('');
   const [creando, setCreando] = useState(false);
   const [errorCrear, setErrorCrear] = useState('');
 
   const [editId, setEditId] = useState<string | null>(null);
   const [editNombre, setEditNombre] = useState('');
   const [editUnidad, setEditUnidad] = useState('');
-  const [editStockActual, setEditStockActual] = useState('');
   const [editStockMinimo, setEditStockMinimo] = useState('');
   const [editStockIdeal, setEditStockIdeal] = useState('');
+  const [editPrecioReferencia, setEditPrecioReferencia] = useState('');
   const [guardando, setGuardando] = useState(false);
   const [errorFila, setErrorFila] = useState<{ id: string; msg: string } | null>(null);
 
   const [soloAlerta, setSoloAlerta] = useState(false);
   const [busqueda, setBusqueda] = useState('');
+
+  // carga / descarga
+  const [movimientoAbierto, setMovimientoAbierto] = useState<{ id: string; tipo: TipoMovimientoInsumo } | null>(null);
+  const [movCantidad, setMovCantidad] = useState('');
+  const [movPrecio, setMovPrecio] = useState('');
+  const [movNota, setMovNota] = useState('');
+  const [movArchivo, setMovArchivo] = useState<File | null>(null);
+  const [movGuardando, setMovGuardando] = useState(false);
+  const [movError, setMovError] = useState('');
+
+  // histórico
+  const [historicoAbierto, setHistoricoAbierto] = useState<string | null>(null);
+  const [historico, setHistorico] = useState<Record<string, MovimientoInsumo[]>>({});
+  const [historicoCargando, setHistoricoCargando] = useState<string | null>(null);
 
   useEffect(() => {
     cargarInsumos();
@@ -67,11 +83,11 @@ export default function StockPage() {
   async function crearInsumo() {
     const nombre = nuevoNombre.trim();
     const unidad = nuevoUnidad.trim();
-    const stockActual = parseFloat(nuevoStockActual || '0');
     const stockMinimo = parseFloat(nuevoStockMinimo || '0');
     const stockIdeal = parseFloat(nuevoStockIdeal || '0');
-    if (!nombre || !unidad || Number.isNaN(stockActual) || Number.isNaN(stockMinimo) || Number.isNaN(stockIdeal)) {
-      setErrorCrear('Completa nombre, unidad y los tres valores de stock');
+    const precioReferencia = parseFloat(nuevoPrecioReferencia || '0');
+    if (!nombre || !unidad || Number.isNaN(stockMinimo) || Number.isNaN(stockIdeal) || Number.isNaN(precioReferencia)) {
+      setErrorCrear('Completa nombre, unidad, stock mínimo/ideal y precio de referencia');
       return;
     }
     setCreando(true);
@@ -80,16 +96,16 @@ export default function StockPage() {
       const data = await gqlRequest<{ crearInsumo: Insumo }>(MUTATION_CREAR_INSUMO, {
         nombre,
         unidad,
-        stockActual,
         stockMinimo,
         stockIdeal,
+        precioReferencia,
       });
       setInsumos((prev) => [...prev, data.crearInsumo]);
       setNuevoNombre('');
       setNuevoUnidad('');
-      setNuevoStockActual('');
       setNuevoStockMinimo('');
       setNuevoStockIdeal('');
+      setNuevoPrecioReferencia('');
     } catch (e) {
       setErrorCrear(e instanceof Error ? e.message : 'No se pudo crear el insumo');
     } finally {
@@ -101,9 +117,9 @@ export default function StockPage() {
     setEditId(i.id);
     setEditNombre(i.nombre);
     setEditUnidad(i.unidad);
-    setEditStockActual(String(i.stockActual));
     setEditStockMinimo(String(i.stockMinimo));
     setEditStockIdeal(String(i.stockIdeal));
+    setEditPrecioReferencia(String(i.precioReferencia));
     setErrorFila(null);
   }
 
@@ -114,11 +130,11 @@ export default function StockPage() {
   async function guardarEdicion(id: string) {
     const nombre = editNombre.trim();
     const unidad = editUnidad.trim();
-    const stockActual = parseFloat(editStockActual);
     const stockMinimo = parseFloat(editStockMinimo);
     const stockIdeal = parseFloat(editStockIdeal);
-    if (!nombre || !unidad || Number.isNaN(stockActual) || Number.isNaN(stockMinimo) || Number.isNaN(stockIdeal)) {
-      setErrorFila({ id, msg: 'Completa nombre, unidad y los tres valores de stock' });
+    const precioReferencia = parseFloat(editPrecioReferencia);
+    if (!nombre || !unidad || Number.isNaN(stockMinimo) || Number.isNaN(stockIdeal) || Number.isNaN(precioReferencia)) {
+      setErrorFila({ id, msg: 'Completa nombre, unidad, stock mínimo/ideal y precio de referencia' });
       return;
     }
     setGuardando(true);
@@ -128,9 +144,9 @@ export default function StockPage() {
         id,
         nombre,
         unidad,
-        stockActual,
         stockMinimo,
         stockIdeal,
+        precioReferencia,
       });
       setInsumos((prev) => prev.map((i) => (i.id === id ? data.actualizarInsumo : i)));
       setEditId(null);
@@ -154,12 +170,127 @@ export default function StockPage() {
   }
 
   async function eliminarInsumo(i: Insumo) {
-    if (!window.confirm(`¿Eliminar "${i.nombre}" definitivamente?`)) return;
+    if (!window.confirm(`¿Eliminar "${i.nombre}" definitivamente? También se borra su histórico de cargas/descargas.`)) return;
     try {
       await gqlRequest(MUTATION_ELIMINAR_INSUMO, { id: i.id });
       setInsumos((prev) => prev.filter((x) => x.id !== i.id));
     } catch (e) {
       setErrorFila({ id: i.id, msg: e instanceof Error ? e.message : 'No se pudo eliminar' });
+    }
+  }
+
+  function abrirMovimiento(i: Insumo, tipo: TipoMovimientoInsumo) {
+    setMovimientoAbierto({ id: i.id, tipo });
+    setMovCantidad('');
+    setMovPrecio(tipo === 'carga' ? String(i.precioReferencia) : '');
+    setMovNota('');
+    setMovArchivo(null);
+    setMovError('');
+    setErrorFila(null);
+  }
+
+  function cerrarMovimiento() {
+    setMovimientoAbierto(null);
+  }
+
+  async function confirmarMovimiento(i: Insumo) {
+    if (!movimientoAbierto) return;
+    const cantidad = parseFloat(movCantidad);
+    if (Number.isNaN(cantidad) || cantidad <= 0) {
+      setMovError('Ingresa una cantidad válida');
+      return;
+    }
+    let precioUnitario: number | undefined;
+    if (movimientoAbierto.tipo === 'carga') {
+      precioUnitario = movPrecio.trim() === '' ? undefined : parseFloat(movPrecio);
+      if (precioUnitario !== undefined && Number.isNaN(precioUnitario)) {
+        setMovError('Precio inválido');
+        return;
+      }
+    }
+
+    setMovGuardando(true);
+    setMovError('');
+    try {
+      let facturaKey: string | undefined;
+      if (movimientoAbierto.tipo === 'carga' && movArchivo) {
+        const prep = await fetch('/api/stock/factura-upload', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ insumoId: i.id, fileName: movArchivo.name }),
+        });
+        const prepData = await prep.json();
+        if (!prep.ok) throw new Error(prepData.error || 'No se pudo preparar la subida de la factura');
+
+        const subida = await fetch(prepData.uploadUrl, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/pdf' },
+          body: movArchivo,
+        });
+        if (!subida.ok) throw new Error('No se pudo subir la factura');
+        facturaKey = prepData.key;
+      }
+
+      const data = await gqlRequest<{ registrarMovimientoInsumo: MovimientoInsumo }>(
+        MUTATION_REGISTRAR_MOVIMIENTO_INSUMO,
+        {
+          insumoId: i.id,
+          tipo: movimientoAbierto.tipo,
+          cantidad,
+          precioUnitario,
+          facturaKey,
+          nota: movNota.trim() || undefined,
+        }
+      );
+
+      setInsumos((prev) =>
+        prev.map((x) => {
+          if (x.id !== i.id) return x;
+          const delta = movimientoAbierto.tipo === 'carga' ? cantidad : -cantidad;
+          const stockActual = x.stockActual + delta;
+          return { ...x, stockActual, bajoMinimo: stockActual < x.stockMinimo };
+        })
+      );
+      if (historico[i.id]) {
+        setHistorico((prev) => ({ ...prev, [i.id]: [data.registrarMovimientoInsumo, ...prev[i.id]] }));
+      }
+      setMovimientoAbierto(null);
+    } catch (e) {
+      setMovError(e instanceof Error ? e.message : 'No se pudo registrar el movimiento');
+    } finally {
+      setMovGuardando(false);
+    }
+  }
+
+  async function toggleHistorico(i: Insumo) {
+    if (historicoAbierto === i.id) {
+      setHistoricoAbierto(null);
+      return;
+    }
+    setHistoricoAbierto(i.id);
+    if (!historico[i.id]) {
+      setHistoricoCargando(i.id);
+      try {
+        const data = await gqlRequest<{ movimientosInsumo: MovimientoInsumo[] }>(QUERY_MOVIMIENTOS_INSUMO, {
+          insumoId: i.id,
+        });
+        setHistorico((prev) => ({ ...prev, [i.id]: data.movimientosInsumo }));
+      } catch {
+        setErrorFila({ id: i.id, msg: 'No se pudo cargar el histórico' });
+      } finally {
+        setHistoricoCargando(null);
+      }
+    }
+  }
+
+  async function verFactura(key: string) {
+    try {
+      const res = await fetch(`/api/stock/factura?key=${encodeURIComponent(key)}`);
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'No se pudo abrir la factura');
+      window.open(data.url, '_blank');
+    } catch (e) {
+      window.alert(e instanceof Error ? e.message : 'No se pudo abrir la factura');
     }
   }
 
@@ -212,17 +343,6 @@ export default function StockPage() {
             />
           </div>
           <div className="filtro-campo">
-            <label htmlFor="nuevoStockActual">Stock actual</label>
-            <input
-              id="nuevoStockActual"
-              type="number"
-              min="0"
-              step="0.01"
-              value={nuevoStockActual}
-              onChange={(e) => setNuevoStockActual(e.target.value)}
-            />
-          </div>
-          <div className="filtro-campo">
             <label htmlFor="nuevoStockMinimo">Stock mínimo</label>
             <input
               id="nuevoStockMinimo"
@@ -244,11 +364,26 @@ export default function StockPage() {
               onChange={(e) => setNuevoStockIdeal(e.target.value)}
             />
           </div>
+          <div className="filtro-campo">
+            <label htmlFor="nuevoPrecioReferencia">Precio referencia</label>
+            <input
+              id="nuevoPrecioReferencia"
+              type="number"
+              min="0"
+              step="0.01"
+              value={nuevoPrecioReferencia}
+              onChange={(e) => setNuevoPrecioReferencia(e.target.value)}
+            />
+          </div>
           <button className="btn btn-naranja" disabled={creando} onClick={crearInsumo}>
             + Agregar insumo
           </button>
           {errorCrear && <div className="pedidos-error">{errorCrear}</div>}
         </div>
+        <p className="ayuda-stock">
+          El stock inicial de un insumo nuevo se registra con el botón <b>Cargar</b> de su fila (queda en el histórico,
+          igual que cualquier otra compra).
+        </p>
 
         <div className="filtros-pedidos card-blanca">
           <div className="filtro-campo">
@@ -289,6 +424,7 @@ export default function StockPage() {
                   <th>Stock actual</th>
                   <th>Stock mínimo</th>
                   <th>Stock ideal</th>
+                  <th>Precio ref.</th>
                   <th>Activo</th>
                   <th>Acciones</th>
                 </tr>
@@ -296,6 +432,8 @@ export default function StockPage() {
               <tbody>
                 {insumosFiltrados.map((i) => {
                   const enEdicion = editId === i.id;
+                  const movAbierto = movimientoAbierto?.id === i.id ? movimientoAbierto.tipo : null;
+                  const histAbierto = historicoAbierto === i.id;
                   return (
                     <Fragment key={i.id}>
                       <tr className={!i.activo ? 'fila-inactiva' : i.bajoMinimo ? 'fila-alerta' : ''}>
@@ -307,15 +445,7 @@ export default function StockPage() {
                             <td>
                               <input value={editUnidad} onChange={(e) => setEditUnidad(e.target.value)} />
                             </td>
-                            <td>
-                              <input
-                                type="number"
-                                min="0"
-                                step="0.01"
-                                value={editStockActual}
-                                onChange={(e) => setEditStockActual(e.target.value)}
-                              />
-                            </td>
+                            <td className="col-monto">{i.stockActual}</td>
                             <td>
                               <input
                                 type="number"
@@ -332,6 +462,15 @@ export default function StockPage() {
                                 step="0.01"
                                 value={editStockIdeal}
                                 onChange={(e) => setEditStockIdeal(e.target.value)}
+                              />
+                            </td>
+                            <td>
+                              <input
+                                type="number"
+                                min="0"
+                                step="0.01"
+                                value={editPrecioReferencia}
+                                onChange={(e) => setEditPrecioReferencia(e.target.value)}
                               />
                             </td>
                             <td>{i.activo ? 'Sí' : 'No'}</td>
@@ -354,12 +493,22 @@ export default function StockPage() {
                             <td className="col-monto">{i.stockActual}</td>
                             <td className="col-monto">{i.stockMinimo}</td>
                             <td className="col-monto">{i.stockIdeal}</td>
+                            <td className="col-monto">${i.precioReferencia.toFixed(2)}</td>
                             <td>
                               <button className="btn btn-blanco" onClick={() => toggleActivo(i)}>
                                 {i.activo ? 'Sí — ocultar' : 'No — activar'}
                               </button>
                             </td>
                             <td className="acciones-productos">
+                              <button className="btn btn-verde" onClick={() => abrirMovimiento(i, 'carga')}>
+                                ⬆️ Cargar
+                              </button>
+                              <button className="btn btn-naranja" onClick={() => abrirMovimiento(i, 'descarga')}>
+                                ⬇️ Descargar
+                              </button>
+                              <button className="btn btn-blanco" onClick={() => toggleHistorico(i)}>
+                                {histAbierto ? 'Ocultar histórico' : 'Ver histórico'}
+                              </button>
                               <button className="btn btn-blanco" onClick={() => iniciarEdicion(i)}>
                                 Editar
                               </button>
@@ -370,9 +519,113 @@ export default function StockPage() {
                           </>
                         )}
                       </tr>
+
+                      {movAbierto && (
+                        <tr>
+                          <td colSpan={8}>
+                            <div className="panel-movimiento">
+                              <strong>{movAbierto === 'carga' ? '⬆️ Cargar stock' : '⬇️ Descargar stock'}</strong>
+                              <div className="filtro-campo">
+                                <label>Cantidad ({i.unidad})</label>
+                                <input
+                                  type="number"
+                                  min="0"
+                                  step="0.01"
+                                  value={movCantidad}
+                                  onChange={(e) => setMovCantidad(e.target.value)}
+                                  autoFocus
+                                />
+                              </div>
+                              {movAbierto === 'carga' && (
+                                <>
+                                  <div className="filtro-campo">
+                                    <label>Precio unitario (ref. ${i.precioReferencia.toFixed(2)})</label>
+                                    <input
+                                      type="number"
+                                      min="0"
+                                      step="0.01"
+                                      value={movPrecio}
+                                      onChange={(e) => setMovPrecio(e.target.value)}
+                                    />
+                                  </div>
+                                  <div className="filtro-campo">
+                                    <label>Factura (PDF, opcional)</label>
+                                    <input
+                                      type="file"
+                                      accept="application/pdf"
+                                      onChange={(e) => setMovArchivo(e.target.files?.[0] || null)}
+                                    />
+                                  </div>
+                                </>
+                              )}
+                              <div className="filtro-campo" style={{ minWidth: 220 }}>
+                                <label>Nota (opcional)</label>
+                                <input value={movNota} onChange={(e) => setMovNota(e.target.value)} />
+                              </div>
+                              <button
+                                className="btn btn-verde"
+                                disabled={movGuardando}
+                                onClick={() => confirmarMovimiento(i)}
+                              >
+                                Confirmar
+                              </button>
+                              <button className="btn btn-blanco" onClick={cerrarMovimiento}>
+                                Cancelar
+                              </button>
+                              {movError && <div className="pedidos-error">{movError}</div>}
+                            </div>
+                          </td>
+                        </tr>
+                      )}
+
+                      {histAbierto && (
+                        <tr>
+                          <td colSpan={8}>
+                            {historicoCargando === i.id ? (
+                              <div className="vacio-col">Cargando histórico...</div>
+                            ) : !historico[i.id] || historico[i.id].length === 0 ? (
+                              <div className="vacio-col">Sin movimientos todavía</div>
+                            ) : (
+                              <table className="tabla-pedidos tabla-historico">
+                                <thead>
+                                  <tr>
+                                    <th>Fecha</th>
+                                    <th>Tipo</th>
+                                    <th>Cantidad</th>
+                                    <th>Precio unitario</th>
+                                    <th>Nota</th>
+                                    <th>Factura</th>
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  {historico[i.id].map((m) => (
+                                    <tr key={m.id}>
+                                      <td>{new Date(m.createdAt).toLocaleString('es')}</td>
+                                      <td>{m.tipo === 'carga' ? '⬆️ Carga' : '⬇️ Descarga'}</td>
+                                      <td className="col-monto">{m.cantidad}</td>
+                                      <td className="col-monto">${m.precioUnitario.toFixed(2)}</td>
+                                      <td>{m.nota || '—'}</td>
+                                      <td>
+                                        {m.facturaKey ? (
+                                          <button className="btn btn-blanco" onClick={() => verFactura(m.facturaKey!)}>
+                                            Ver factura
+                                          </button>
+                                        ) : (
+                                          '—'
+                                        )}
+                                      </td>
+                                    </tr>
+                                  ))}
+                                </tbody>
+                              </table>
+                            )}
+                          </td>
+                        </tr>
+                      )}
+
                       {errorFila?.id === i.id && (
                         <tr>
-                          <td colSpan={7} className="pedidos-error">
+                          <td colSpan={8} className="pedidos-error">
                             {errorFila.msg}
                           </td>
                         </tr>

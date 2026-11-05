@@ -70,6 +70,20 @@ export interface Insumo {
   stockActual: number;
   stockMinimo: number;
   stockIdeal: number;
+  precioReferencia: number;
   activo: boolean;
   bajoMinimo: boolean;
+}
+
+export type TipoMovimientoInsumo = 'carga' | 'descarga';
+
+export interface MovimientoInsumo {
+  id: string;
+  insumoId: string;
+  tipo: TipoMovimientoInsumo;
+  cantidad: number;
+  precioUnitario: number;
+  facturaKey: string | null;
+  nota: string | null;
+  createdAt: string;
 }
