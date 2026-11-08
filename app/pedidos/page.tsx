@@ -116,9 +116,11 @@ export default function PedidosPage() {
 
   // los cancelados no se suman al total mostrado salvo que el filtro de
   // estado sea justo "cancelado" (ahí sí se quiere ver cuánto representaban)
-  const totalMostrado = pedidosFiltrados
-    .filter((p) => filtroEstado === 'cancelado' || p.estado !== 'cancelado')
-    .reduce((s, p) => s + p.total, 0);
+  const pedidosParaTotal = pedidosFiltrados.filter(
+    (p) => filtroEstado === 'cancelado' || p.estado !== 'cancelado'
+  );
+  const totalMostrado = pedidosParaTotal.reduce((s, p) => s + p.total, 0);
+  const totalMostradoSinDelivery = pedidosParaTotal.reduce((s, p) => s + (p.total - p.costoDelivery), 0);
 
   function abrirCancelacion(p: Pedido) {
     setCancelandoId(p.id);
@@ -337,6 +339,7 @@ export default function PedidosPage() {
                   <th>Distancia</th>
                   <th>Pago</th>
                   <th>Pagado</th>
+                  <th>Total sin delivery</th>
                   <th>Total</th>
                   <th>Acciones</th>
                 </tr>
@@ -381,6 +384,7 @@ export default function PedidosPage() {
                         {p.pagado ? '✅ Pagado' : '⏳ Sin pagar'}
                       </button>
                     </td>
+                    <td className="col-monto">${(p.total - p.costoDelivery).toFixed(2)}</td>
                     <td className="col-monto">${p.total.toFixed(2)}</td>
                     <td className="acciones-productos">
                       {p.estado !== 'cancelado' && (
@@ -392,7 +396,7 @@ export default function PedidosPage() {
                   </tr>
                   {cancelandoId === p.id && (
                     <tr>
-                      <td colSpan={12}>
+                      <td colSpan={13}>
                         <div className="panel-movimiento">
                           <strong>Cancelar pedido de {p.clienteNombre}</strong>
                           <div className="filtro-campo" style={{ minWidth: 280 }}>
@@ -427,6 +431,7 @@ export default function PedidosPage() {
                     Total mostrado
                     {filtroEstado !== 'cancelado' && ' (sin cancelados)'}
                   </td>
+                  <td className="col-monto">${totalMostradoSinDelivery.toFixed(2)}</td>
                   <td className="col-monto">${totalMostrado.toFixed(2)}</td>
                   <td></td>
                 </tr>

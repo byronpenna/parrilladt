@@ -1,10 +1,11 @@
 import { graphql } from 'graphql';
 import { schema } from './schema';
-import { rootValue } from './resolvers';
+import { rootValue, type ResolverContext } from './resolvers';
 
 interface GraphqlEvent {
   query: string;
   variables?: Record<string, unknown>;
+  context?: ResolverContext;
 }
 
 export const handler = async (event: GraphqlEvent) => {
@@ -13,6 +14,7 @@ export const handler = async (event: GraphqlEvent) => {
     source: event.query,
     rootValue,
     variableValues: event.variables,
+    contextValue: event.context,
   });
 
   if (result.errors) {

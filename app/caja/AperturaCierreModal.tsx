@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { gqlRequest } from '@/lib/graphql-client';
 import { MUTATION_ABRIR_DIA, MUTATION_CERRAR_DIA } from '@/lib/queries';
 import type { Cuenta, CierreDia } from '@/lib/types';
+import { hoyNegocioALasHoras } from '@/lib/timezone';
 
 function moneda(valor: number) {
   return `$${valor.toLocaleString('es', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -13,6 +14,7 @@ export default function AperturaCierreModal({
   modo,
   cuentasActivas,
   cierreActual,
+  esSuperadmin,
   onClose,
   onAbierto,
   onCerrado,
@@ -20,6 +22,7 @@ export default function AperturaCierreModal({
   modo: 'abrir' | 'cerrar';
   cuentasActivas: Cuenta[];
   cierreActual: CierreDia | null;
+  esSuperadmin: boolean;
   onClose: () => void;
   onAbierto: (cierre: CierreDia) => void;
   onCerrado: (cierre: CierreDia) => void;
@@ -32,6 +35,7 @@ export default function AperturaCierreModal({
     return inicial;
   });
   const [nota, setNota] = useState('');
+  const [horaApertura, setHoraApertura] = useState('');
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState('');
   const [confirmando, setConfirmando] = useState(false);
@@ -41,12 +45,18 @@ export default function AperturaCierreModal({
       const valor = parseFloat(montos[c.id] ?? '0');
       return { cuentaId: c.id, montoApertura: Number.isNaN(valor) ? 0 : valor };
     });
+    let abiertoEn: string | undefined;
+    if (esSuperadmin && horaApertura) {
+      const [h, m] = horaApertura.split(':').map(Number);
+      abiertoEn = hoyNegocioALasHoras(h, m).toISOString();
+    }
     setGuardando(true);
     setError('');
     try {
       const data = await gqlRequest<{ abrirDia: CierreDia }>(MUTATION_ABRIR_DIA, {
         aperturas,
         nota: nota.trim() || undefined,
+        abiertoEn,
       });
       onAbierto(data.abrirDia);
     } catch (e) {
@@ -110,6 +120,12 @@ export default function AperturaCierreModal({
                   />
                 </div>
               ))}
+              {esSuperadmin && (
+                <div className="filtro-campo">
+                  <label>🔑 Hora real de apertura (opcional, superadmin)</label>
+                  <input type="time" value={horaApertura} onChange={(e) => setHoraApertura(e.target.value)} />
+                </div>
+              )}
             </>
           ) : (
             cierreActual && (

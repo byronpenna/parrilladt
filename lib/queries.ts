@@ -375,8 +375,8 @@ export const QUERY_CIERRES_DIA = `
 `;
 
 export const MUTATION_ABRIR_DIA = `
-  mutation AbrirDia($aperturas: [AperturaCuentaInput!]!, $nota: String) {
-    abrirDia(aperturas: $aperturas, nota: $nota) { ${CIERRE_DIA_CAMPOS} }
+  mutation AbrirDia($aperturas: [AperturaCuentaInput!]!, $nota: String, $abiertoEn: String) {
+    abrirDia(aperturas: $aperturas, nota: $nota, abiertoEn: $abiertoEn) { ${CIERRE_DIA_CAMPOS} }
   }
 `;
 

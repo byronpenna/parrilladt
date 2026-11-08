@@ -20,6 +20,20 @@
       ]
     }
   ],
+  "/PedidosCanchaStack/SuperadminGroup": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "SuperadminGroup"
+    },
+    {
+      "type": "aws:cdk:creationStack",
+      "data": [
+        "new PedidosCanchaStack (/Users/byron/Downloads/pedidos-cancha/infra/lib/pedidos-cancha-stack.ts:245:5)",
+        "<anonymous> (/Users/byron/Downloads/pedidos-cancha/infra/bin/pedidos-cancha.ts:8:1)",
+        "...node internals, ts-node, ts-node..."
+      ]
+    }
+  ],
   "/PedidosCanchaStack/UserPoolId": [
     {
       "type": "aws:cdk:logicalId",
@@ -28,7 +42,7 @@
     {
       "type": "aws:cdk:creationStack",
       "data": [
-        "new PedidosCanchaStack (/Users/byron/Downloads/pedidos-cancha/infra/lib/pedidos-cancha-stack.ts:238:5)",
+        "new PedidosCanchaStack (/Users/byron/Downloads/pedidos-cancha/infra/lib/pedidos-cancha-stack.ts:251:5)",
         "<anonymous> (/Users/byron/Downloads/pedidos-cancha/infra/bin/pedidos-cancha.ts:8:1)",
         "...node internals, ts-node, ts-node..."
       ]
@@ -42,7 +56,7 @@
     {
       "type": "aws:cdk:creationStack",
       "data": [
-        "new PedidosCanchaStack (/Users/byron/Downloads/pedidos-cancha/infra/lib/pedidos-cancha-stack.ts:239:5)",
+        "new PedidosCanchaStack (/Users/byron/Downloads/pedidos-cancha/infra/lib/pedidos-cancha-stack.ts:252:5)",
         "<anonymous> (/Users/byron/Downloads/pedidos-cancha/infra/bin/pedidos-cancha.ts:8:1)",
         "...node internals, ts-node, ts-node..."
       ]
@@ -56,7 +70,7 @@
     {
       "type": "aws:cdk:creationStack",
       "data": [
-        "new PedidosCanchaStack (/Users/byron/Downloads/pedidos-cancha/infra/lib/pedidos-cancha-stack.ts:241:5)",
+        "new PedidosCanchaStack (/Users/byron/Downloads/pedidos-cancha/infra/lib/pedidos-cancha-stack.ts:254:5)",
         "<anonymous> (/Users/byron/Downloads/pedidos-cancha/infra/bin/pedidos-cancha.ts:8:1)",
         "...node internals, ts-node, ts-node..."
       ]
@@ -70,7 +84,7 @@
     {
       "type": "aws:cdk:creationStack",
       "data": [
-        "new PedidosCanchaStack (/Users/byron/Downloads/pedidos-cancha/infra/lib/pedidos-cancha-stack.ts:242:5)",
+        "new PedidosCanchaStack (/Users/byron/Downloads/pedidos-cancha/infra/lib/pedidos-cancha-stack.ts:255:5)",
         "<anonymous> (/Users/byron/Downloads/pedidos-cancha/infra/bin/pedidos-cancha.ts:8:1)",
         "...node internals, ts-node, ts-node..."
       ]
@@ -84,7 +98,7 @@
     {
       "type": "aws:cdk:creationStack",
       "data": [
-        "new PedidosCanchaStack (/Users/byron/Downloads/pedidos-cancha/infra/lib/pedidos-cancha-stack.ts:243:5)",
+        "new PedidosCanchaStack (/Users/byron/Downloads/pedidos-cancha/infra/lib/pedidos-cancha-stack.ts:256:5)",
         "<anonymous> (/Users/byron/Downloads/pedidos-cancha/infra/bin/pedidos-cancha.ts:8:1)",
         "...node internals, ts-node, ts-node..."
       ]
@@ -98,7 +112,7 @@
     {
       "type": "aws:cdk:creationStack",
       "data": [
-        "new PedidosCanchaStack (/Users/byron/Downloads/pedidos-cancha/infra/lib/pedidos-cancha-stack.ts:244:5)",
+        "new PedidosCanchaStack (/Users/byron/Downloads/pedidos-cancha/infra/lib/pedidos-cancha-stack.ts:257:5)",
         "<anonymous> (/Users/byron/Downloads/pedidos-cancha/infra/bin/pedidos-cancha.ts:8:1)",
         "...node internals, ts-node, ts-node..."
       ]
@@ -112,7 +126,7 @@
     {
       "type": "aws:cdk:creationStack",
       "data": [
-        "new PedidosCanchaStack (/Users/byron/Downloads/pedidos-cancha/infra/lib/pedidos-cancha-stack.ts:245:5)",
+        "new PedidosCanchaStack (/Users/byron/Downloads/pedidos-cancha/infra/lib/pedidos-cancha-stack.ts:258:5)",
         "<anonymous> (/Users/byron/Downloads/pedidos-cancha/infra/bin/pedidos-cancha.ts:8:1)",
         "...node internals, ts-node, ts-node..."
       ]
@@ -126,7 +140,7 @@
     {
       "type": "aws:cdk:creationStack",
       "data": [
-        "new PedidosCanchaStack (/Users/byron/Downloads/pedidos-cancha/infra/lib/pedidos-cancha-stack.ts:246:5)",
+        "new PedidosCanchaStack (/Users/byron/Downloads/pedidos-cancha/infra/lib/pedidos-cancha-stack.ts:259:5)",
         "<anonymous> (/Users/byron/Downloads/pedidos-cancha/infra/bin/pedidos-cancha.ts:8:1)",
         "...node internals, ts-node, ts-node..."
       ]
@@ -140,7 +154,7 @@
     {
       "type": "aws:cdk:creationStack",
       "data": [
-        "new PedidosCanchaStack (/Users/byron/Downloads/pedidos-cancha/infra/lib/pedidos-cancha-stack.ts:247:5)",
+        "new PedidosCanchaStack (/Users/byron/Downloads/pedidos-cancha/infra/lib/pedidos-cancha-stack.ts:260:5)",
         "<anonymous> (/Users/byron/Downloads/pedidos-cancha/infra/bin/pedidos-cancha.ts:8:1)",
         "...node internals, ts-node, ts-node..."
       ]
@@ -154,7 +168,7 @@
     {
       "type": "aws:cdk:creationStack",
       "data": [
-        "new PedidosCanchaStack (/Users/byron/Downloads/pedidos-cancha/infra/lib/pedidos-cancha-stack.ts:248:5)",
+        "new PedidosCanchaStack (/Users/byron/Downloads/pedidos-cancha/infra/lib/pedidos-cancha-stack.ts:261:5)",
         "<anonymous> (/Users/byron/Downloads/pedidos-cancha/infra/bin/pedidos-cancha.ts:8:1)",
         "...node internals, ts-node, ts-node..."
       ]
@@ -168,7 +182,7 @@
     {
       "type": "aws:cdk:creationStack",
       "data": [
-        "new PedidosCanchaStack (/Users/byron/Downloads/pedidos-cancha/infra/lib/pedidos-cancha-stack.ts:296:5)",
+        "new PedidosCanchaStack (/Users/byron/Downloads/pedidos-cancha/infra/lib/pedidos-cancha-stack.ts:309:5)",
         "<anonymous> (/Users/byron/Downloads/pedidos-cancha/infra/bin/pedidos-cancha.ts:8:1)",
         "...node internals, ts-node, ts-node..."
       ]
@@ -182,7 +196,7 @@
     {
       "type": "aws:cdk:creationStack",
       "data": [
-        "new PedidosCanchaStack (/Users/byron/Downloads/pedidos-cancha/infra/lib/pedidos-cancha-stack.ts:297:5)",
+        "new PedidosCanchaStack (/Users/byron/Downloads/pedidos-cancha/infra/lib/pedidos-cancha-stack.ts:310:5)",
         "<anonymous> (/Users/byron/Downloads/pedidos-cancha/infra/bin/pedidos-cancha.ts:8:1)",
         "...node internals, ts-node, ts-node..."
       ]
@@ -196,7 +210,7 @@
     {
       "type": "aws:cdk:creationStack",
       "data": [
-        "new PedidosCanchaStack (/Users/byron/Downloads/pedidos-cancha/infra/lib/pedidos-cancha-stack.ts:298:5)",
+        "new PedidosCanchaStack (/Users/byron/Downloads/pedidos-cancha/infra/lib/pedidos-cancha-stack.ts:311:5)",
         "<anonymous> (/Users/byron/Downloads/pedidos-cancha/infra/bin/pedidos-cancha.ts:8:1)",
         "...node internals, ts-node, ts-node..."
       ]
@@ -252,7 +266,7 @@
       "type": "aws:cdk:creationStack",
       "data": [
         "...MutableImport.addIngressRule in aws-cdk-lib...",
-        "new PedidosCanchaStack (/Users/byron/Downloads/pedidos-cancha/infra/lib/pedidos-cancha-stack.ts:262:21)",
+        "new PedidosCanchaStack (/Users/byron/Downloads/pedidos-cancha/infra/lib/pedidos-cancha-stack.ts:275:21)",
         "<anonymous> (/Users/byron/Downloads/pedidos-cancha/infra/bin/pedidos-cancha.ts:8:1)",
         "...node internals, ts-node, ts-node..."
       ]
@@ -402,7 +416,7 @@
       "type": "aws:cdk:creationStack",
       "data": [
         "...new SecurityGroup2 in aws-cdk-lib...",
-        "new PedidosCanchaStack (/Users/byron/Downloads/pedidos-cancha/infra/lib/pedidos-cancha-stack.ts:255:30)",
+        "new PedidosCanchaStack (/Users/byron/Downloads/pedidos-cancha/infra/lib/pedidos-cancha-stack.ts:268:30)",
         "<anonymous> (/Users/byron/Downloads/pedidos-cancha/infra/bin/pedidos-cancha.ts:8:1)",
         "...node internals, ts-node, ts-node..."
       ]
@@ -417,7 +431,7 @@
       "type": "aws:cdk:creationStack",
       "data": [
         "...new Secret2 in aws-cdk-lib...",
-        "new PedidosCanchaStack (/Users/byron/Downloads/pedidos-cancha/infra/lib/pedidos-cancha-stack.ts:268:35)",
+        "new PedidosCanchaStack (/Users/byron/Downloads/pedidos-cancha/infra/lib/pedidos-cancha-stack.ts:281:35)",
         "<anonymous> (/Users/byron/Downloads/pedidos-cancha/infra/bin/pedidos-cancha.ts:8:1)",
         "...node internals, ts-node, ts-node..."
       ]
@@ -432,7 +446,7 @@
       "type": "aws:cdk:creationStack",
       "data": [
         "...new Role2 in aws-cdk-lib...",
-        "new PedidosCanchaStack (/Users/byron/Downloads/pedidos-cancha/infra/lib/pedidos-cancha-stack.ts:274:29)",
+        "new PedidosCanchaStack (/Users/byron/Downloads/pedidos-cancha/infra/lib/pedidos-cancha-stack.ts:287:29)",
         "<anonymous> (/Users/byron/Downloads/pedidos-cancha/infra/bin/pedidos-cancha.ts:8:1)",
         "...node internals, ts-node, ts-node..."
       ]
@@ -447,7 +461,7 @@
       "type": "aws:cdk:creationStack",
       "data": [
         "...new Instance2 in aws-cdk-lib...",
-        "new PedidosCanchaStack (/Users/byron/Downloads/pedidos-cancha/infra/lib/pedidos-cancha-stack.ts:280:25)",
+        "new PedidosCanchaStack (/Users/byron/Downloads/pedidos-cancha/infra/lib/pedidos-cancha-stack.ts:293:25)",
         "<anonymous> (/Users/byron/Downloads/pedidos-cancha/infra/bin/pedidos-cancha.ts:8:1)",
         "...node internals, ts-node, ts-node..."
       ]
@@ -462,7 +476,7 @@
       "type": "aws:cdk:creationStack",
       "data": [
         "...new Instance2 in aws-cdk-lib...",
-        "new PedidosCanchaStack (/Users/byron/Downloads/pedidos-cancha/infra/lib/pedidos-cancha-stack.ts:280:25)",
+        "new PedidosCanchaStack (/Users/byron/Downloads/pedidos-cancha/infra/lib/pedidos-cancha-stack.ts:293:25)",
         "<anonymous> (/Users/byron/Downloads/pedidos-cancha/infra/bin/pedidos-cancha.ts:8:1)",
         "...node internals, ts-node, ts-node..."
       ]
@@ -548,7 +562,7 @@
       "type": "aws:cdk:creationStack",
       "data": [
         "...WrappedClass.grantWrite in aws-cdk-lib...",
-        "new PedidosCanchaStack (/Users/byron/Downloads/pedidos-cancha/infra/lib/pedidos-cancha-stack.ts:278:27)",
+        "new PedidosCanchaStack (/Users/byron/Downloads/pedidos-cancha/infra/lib/pedidos-cancha-stack.ts:291:27)",
         "<anonymous> (/Users/byron/Downloads/pedidos-cancha/infra/bin/pedidos-cancha.ts:8:1)"
       ]
     }

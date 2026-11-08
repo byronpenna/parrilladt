@@ -235,6 +235,19 @@ export class PedidosCanchaStack extends cdk.Stack {
       refreshTokenValidity: cdk.Duration.days(30),
     });
 
+    // rol con permiso para acciones sensibles de caja (borrar cierres ya
+    // cerrados, fijar manualmente la hora de apertura del día); el grupo
+    // viaja en el id token como "cognito:groups" y se revisa en los
+    // resolvers (ver requireSuperadmin en infra/lambda/graphql/resolvers.ts).
+    // Agregar un usuario al grupo requiere cognito-idp:AdminAddUserToGroup,
+    // que no está en el perfil IAM local "aula" — hacerlo desde la consola
+    // de AWS (Cognito → grupos de usuarios → superadmin → Agregar usuario).
+    new cognito.CfnUserPoolGroup(this, 'SuperadminGroup', {
+      userPoolId: userPool.userPoolId,
+      groupName: 'superadmin',
+      description: 'Acceso a acciones sensibles de caja: borrar cierres de día y fijar manualmente la hora de apertura',
+    });
+
     new cdk.CfnOutput(this, 'UserPoolId', { value: userPool.userPoolId });
     new cdk.CfnOutput(this, 'UserPoolClientId', { value: userPoolClient.userPoolClientId });
 

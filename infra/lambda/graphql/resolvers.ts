@@ -40,6 +40,18 @@ const RADIO_TIERRA_KM = 6371;
 // adelantaría la fecha casi todas las horas de operación.
 const NEGOCIO_TZ = 'America/El_Salvador';
 
+export interface ResolverContext {
+  groups?: string[];
+}
+
+// acciones sensibles de caja (borrar cierres, fijar manualmente la hora de
+// apertura) quedan reservadas al grupo "superadmin" de Cognito
+function requireSuperadmin(context: ResolverContext | undefined) {
+  if (!context?.groups?.includes('superadmin')) {
+    throw new Error('Esta acción requiere el rol superadmin');
+  }
+}
+
 // Distancia en línea recta (no la de ruta real), suficiente para un
 // estimado de "más o menos cuántos kilómetros son".
 function distanciaHaversineKm(lat1: number, lng1: number, lat2: number, lng2: number): number {
@@ -1076,14 +1088,28 @@ export const rootValue = {
     return shapeCuenta({ ...res.rows[0], saldo_actual: saldoRes.rows[0].saldo_actual });
   },
 
-  abrirDia: async ({
-    aperturas,
-    nota,
-  }: {
-    aperturas: { cuentaId: string; montoApertura: number }[];
-    nota?: string;
-  }) => {
+  abrirDia: async (
+    {
+      aperturas,
+      nota,
+      abiertoEn,
+    }: {
+      aperturas: { cuentaId: string; montoApertura: number }[];
+      nota?: string;
+      abiertoEn?: string;
+    },
+    context?: ResolverContext
+  ) => {
     if (aperturas.length === 0) throw new Error('Indica el monto de apertura de al menos una cuenta');
+    let abiertoEnFecha: Date | null = null;
+    if (abiertoEn) {
+      // fijar manualmente la hora de apertura (ej. se abrió tarde el registro
+      // pero el negocio ya estaba operando desde antes) es una corrección
+      // sensible: solo superadmin puede alterarla
+      requireSuperadmin(context);
+      abiertoEnFecha = new Date(abiertoEn);
+      if (Number.isNaN(abiertoEnFecha.getTime())) throw new Error('La hora de apertura no es válida');
+    }
     const pool = await getPool();
     const client = await pool.connect();
     try {
@@ -1096,8 +1122,9 @@ export const rootValue = {
         throw new Error('Ya existe un cierre de caja para hoy');
       }
       const cierreRes = await client.query(
-        `INSERT INTO cierres_dia (fecha, nota_apertura) VALUES ((now() AT TIME ZONE $2)::date, $1) RETURNING id`,
-        [nota || null, NEGOCIO_TZ]
+        `INSERT INTO cierres_dia (fecha, nota_apertura, abierto_en)
+         VALUES ((now() AT TIME ZONE $2)::date, $1, COALESCE($3::timestamptz, now())) RETURNING id`,
+        [nota || null, NEGOCIO_TZ, abiertoEnFecha]
       );
       const cierreDiaId = cierreRes.rows[0].id;
       for (const a of aperturas) {
@@ -1138,11 +1165,14 @@ export const rootValue = {
       if (cierreRes.rows[0].estado === 'cerrado') throw new Error('Este día ya está cerrado');
       const abiertoEn = cierreRes.rows[0].abierto_en;
 
+      // el costo de delivery se le paga al rider al momento (normalmente en
+      // efectivo) y nunca queda en la cuenta, así que no cuenta como venta
+      // para el cuadre: contarlo infla lo esperado y genera un "faltante" falso
       const ventasRes = await client.query(
         `SELECT
-           COALESCE(SUM(total) FILTER (WHERE metodo_pago = 'efectivo'), 0) AS ventas_efectivo,
-           COALESCE(SUM(total) FILTER (WHERE metodo_pago = 'transferencia'), 0) AS ventas_transferencia,
-           COALESCE(SUM(total), 0) AS ventas_total
+           COALESCE(SUM(total - costo_delivery) FILTER (WHERE metodo_pago = 'efectivo'), 0) AS ventas_efectivo,
+           COALESCE(SUM(total - costo_delivery) FILTER (WHERE metodo_pago = 'transferencia'), 0) AS ventas_transferencia,
+           COALESCE(SUM(total - costo_delivery), 0) AS ventas_total
          FROM pedidos
          WHERE created_at >= $1 AND created_at <= now() AND pagado = true AND estado <> 'cancelado'`,
         [abiertoEn]
@@ -1185,11 +1215,15 @@ export const rootValue = {
     }
   },
 
-  // solo permite borrar un día que todavía está abierto (apertura hecha por
-  // error); una vez cerrado queda fijo, como cualquier registro de auditoría
-  eliminarCierreDia: async ({ id }: { id: string }) => {
+  // borrar un cierre ya cerrado rompe el rastro de auditoría de caja, así
+  // que queda reservado a superadmin (un día abierto por error lo puede
+  // deshacer cualquier admin, como antes)
+  eliminarCierreDia: async ({ id }: { id: string }, context?: ResolverContext) => {
     const pool = await getPool();
-    const res = await pool.query(`DELETE FROM cierres_dia WHERE id = $1 AND estado = 'abierto'`, [id]);
+    const actual = await pool.query(`SELECT estado FROM cierres_dia WHERE id = $1`, [id]);
+    if (actual.rowCount === 0) return false;
+    if (actual.rows[0].estado !== 'abierto') requireSuperadmin(context);
+    const res = await pool.query(`DELETE FROM cierres_dia WHERE id = $1`, [id]);
     return (res.rowCount ?? 0) > 0;
   },
 };

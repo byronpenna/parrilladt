@@ -16,10 +16,13 @@ export async function POST(req: NextRequest) {
   }
 
   const body = await req.json();
+  const groups = (session['cognito:groups'] as string[] | undefined) ?? [];
 
   const command = new InvokeCommand({
     FunctionName: FUNCTION_NAME,
-    Payload: Buffer.from(JSON.stringify({ query: body.query, variables: body.variables })),
+    Payload: Buffer.from(
+      JSON.stringify({ query: body.query, variables: body.variables, context: { groups } })
+    ),
   });
 
   try {

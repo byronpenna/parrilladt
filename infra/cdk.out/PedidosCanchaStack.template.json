@@ -287,7 +287,7 @@
    "Properties": {
     "Code": {
      "S3Bucket": "cdk-hnb659fds-assets-861418247819-us-east-1",
-     "S3Key": "fd3ee28a57c1cbae15d4cfc3f3cc9e8036f9c2154eef6ed16138139489fc17e0.zip"
+     "S3Key": "aa3c6943de70a72249677f7defd98dfa77e048284b527bd2866d429cadfa676d.zip"
     },
     "Environment": {
      "Variables": {
@@ -344,7 +344,7 @@
    ],
    "Metadata": {
     "aws:cdk:path": "PedidosCanchaStack/GraphqlFn/Resource",
-    "aws:asset:path": "asset.fd3ee28a57c1cbae15d4cfc3f3cc9e8036f9c2154eef6ed16138139489fc17e0",
+    "aws:asset:path": "asset.aa3c6943de70a72249677f7defd98dfa77e048284b527bd2866d429cadfa676d",
     "aws:asset:is-bundled": true,
     "aws:asset:property": "Code"
    }
@@ -691,6 +691,19 @@
     "aws:cdk:path": "PedidosCanchaStack/UserPoolClient/Resource"
    }
   },
+  "SuperadminGroup": {
+   "Type": "AWS::Cognito::UserPoolGroup",
+   "Properties": {
+    "Description": "Acceso a acciones sensibles de caja: borrar cierres de día y fijar manualmente la hora de apertura",
+    "GroupName": "superadmin",
+    "UserPoolId": {
+     "Ref": "UserPool6BA7E5F2"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "PedidosCanchaStack/SuperadminGroup"
+   }
+  },
   "VpnServerSg7EAEB16C": {
    "Type": "AWS::EC2::SecurityGroup",
    "Properties": {
@@ -846,7 +859,7 @@
   "CDKMetadata": {
    "Type": "AWS::CDK::Metadata",
    "Properties": {
-    "Analytics": "v2:deflate64:H4sIAAAAAAAA/11QwW7CMAz9Fu7BY+WwXQfSJi4barUzCqmpUlIHxc4QivrvU1oKbKf3nu1nP7mA4mUBi5k+89zUx7mze0iVaHNUJbKPwaDSZ94lNAWk9YEqNDFYuXwEH08bagIyqz9F9X9KbYhFk8HcmXivGE1A4U6TbjBAqgZ9dQeUXjnd7Wu9I19jy/A5wHskI9aTsrqDVHo3bB1w6501lyzvbDq3Df5gXb663GlmFIa3DIqXkFbRHFFWmlGNNDuvbIT7wkc9JYT1gW65jG/Iiof0zRi23rvsuvGJrJ1FksfWWOl7NeSqRDeWmjzwFeUUpVf5DdDy009RwPMrLGYtWzsPkcR2COWIvx9ubmbQAQAA"
+    "Analytics": "v2:deflate64:H4sIAAAAAAAA/2VQy27CMBD8Fu5mS8OhvRakIi4tStQzMs4SOThr5F0XISv/XjkQoO1pZnb2MdoCipcZzCb6xFNTH6bO7iBVos1Blcg+BoNKn3ib0BSQlnuq0MRg5bwKPh7X1ARkVr+K6m+XWhOLJoPZGXmvGE1A4U6TbjBAqgZ9nQ4ovXK629V6S77GluFjgPdIRqwnZXUHqfRu2Drgxjtrzlne2XhuE/zeunx1vtXMKAxvGRTPIS2iOaAsNKO60Dx5ZRe4L3zUY0JY7umWy/iGrHhIX4xh473LUzc+kqWzSPJo/a8Mz+t7NQStRDeWmux/RjlG6VX+C7T89F0U8PwKs0nL1k5DJLEdQnnBH6ZgfJfhAQAA"
    },
    "Metadata": {
     "aws:cdk:path": "PedidosCanchaStack/CDKMetadata/Default"

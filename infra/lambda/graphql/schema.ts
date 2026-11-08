@@ -244,7 +244,7 @@ export const schema = buildSchema(`
     eliminarFotoMenuItem(id: ID!): Boolean!
     crearCuenta(nombre: String!, tipo: TipoCuenta!): Cuenta!
     actualizarCuenta(id: ID!, nombre: String, activa: Boolean, qrKey: String): Cuenta!
-    abrirDia(aperturas: [AperturaCuentaInput!]!, nota: String): CierreDia!
+    abrirDia(aperturas: [AperturaCuentaInput!]!, nota: String, abiertoEn: String): CierreDia!
     cerrarDia(cierreDiaId: ID!, cierres: [CierreCuentaInput!]!, nota: String): CierreDia!
     eliminarCierreDia(id: ID!): Boolean!
     crearRider(nombre: String!, telefono: String): Rider!

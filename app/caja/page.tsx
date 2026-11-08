@@ -55,10 +55,15 @@ export default function CajaPage() {
   const [historico, setHistorico] = useState<CierreDia[]>([]);
   const [cargandoCierre, setCargandoCierre] = useState(true);
   const [modal, setModal] = useState<'abrir' | 'cerrar' | null>(null);
+  const [esSuperadmin, setEsSuperadmin] = useState(false);
 
   useEffect(() => {
     cargarCuentas();
     cargarCierre();
+    fetch('/api/auth/me')
+      .then((r) => r.json())
+      .then((d) => setEsSuperadmin(!!d.esSuperadmin))
+      .catch(() => {});
   }, []);
 
   async function cargarCuentas() {
@@ -229,6 +234,17 @@ export default function CajaPage() {
       setCierreActual(null);
     } catch {
       cargarCierre();
+    }
+  }
+
+  async function eliminarCierreHistorico(h: CierreDia) {
+    if (!window.confirm(`¿Eliminar definitivamente el cierre del ${h.fecha}? No se puede deshacer.`)) return;
+    try {
+      await gqlRequest(MUTATION_ELIMINAR_CIERRE_DIA, { id: h.id });
+      setHistorico((prev) => prev.filter((x) => x.id !== h.id));
+      if (cierreActual?.id === h.id) setCierreActual(null);
+    } catch (e) {
+      window.alert(e instanceof Error ? e.message : 'No se pudo eliminar el cierre');
     }
   }
 
@@ -470,15 +486,15 @@ export default function CajaPage() {
             </h2>
             <div className="kpi-grid">
               <div className="kpi-card card-blanca">
-                <div className="kpi-label">Ventas efectivo</div>
+                <div className="kpi-label">Ventas efectivo (sin delivery)</div>
                 <div className="kpi-valor">{moneda(cierreActual.ventasEfectivo ?? 0)}</div>
               </div>
               <div className="kpi-card card-blanca">
-                <div className="kpi-label">Ventas transferencia</div>
+                <div className="kpi-label">Ventas transferencia (sin delivery)</div>
                 <div className="kpi-valor">{moneda(cierreActual.ventasTransferencia ?? 0)}</div>
               </div>
               <div className="kpi-card card-blanca">
-                <div className="kpi-label">Ventas totales</div>
+                <div className="kpi-label">Ventas totales (sin delivery)</div>
                 <div className="kpi-valor">{moneda(cierreActual.ventasTotal ?? 0)}</div>
               </div>
             </div>
@@ -526,9 +542,10 @@ export default function CajaPage() {
                 <tr>
                   <th>Fecha</th>
                   <th>Estado</th>
-                  <th>Ventas totales</th>
+                  <th>Ventas totales (sin delivery)</th>
                   <th>Diferencia efectivo</th>
                   <th>Diferencia bancos</th>
+                  {esSuperadmin && <th>Acciones</th>}
                 </tr>
               </thead>
               <tbody>
@@ -543,6 +560,13 @@ export default function CajaPage() {
                     <td className="col-monto">{h.ventasTotal !== null ? moneda(h.ventasTotal) : '—'}</td>
                     <td className={claseDiferencia(h.diferenciaEfectivo)}>{textoDiferencia(h.diferenciaEfectivo)}</td>
                     <td className={claseDiferencia(h.diferenciaBanco)}>{textoDiferencia(h.diferenciaBanco)}</td>
+                    {esSuperadmin && (
+                      <td>
+                        <button className="btn btn-blanco" onClick={() => eliminarCierreHistorico(h)}>
+                          🗑️ Eliminar
+                        </button>
+                      </td>
+                    )}
                   </tr>
                 ))}
               </tbody>
@@ -556,6 +580,7 @@ export default function CajaPage() {
           modo={modal}
           cuentasActivas={cuentasActivas}
           cierreActual={cierreActual ?? null}
+          esSuperadmin={esSuperadmin}
           onClose={() => setModal(null)}
           onAbierto={(cierre) => {
             setCierreActual(cierre);
