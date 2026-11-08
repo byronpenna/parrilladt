@@ -15,6 +15,7 @@ import {
 } from '@/lib/queries';
 import type { MenuItem, Cliente, Rider, MetodoPago, ConfigNegocio } from '@/lib/types';
 import { COSTO_DELIVERY_MIN, COSTO_DELIVERY_PASO } from '@/lib/constants';
+import { horaNegocioTexto, hoyNegocioALasHoras } from '@/lib/timezone';
 
 const CLAVE_MENU = 'cancha_menu_cache';
 const CLAVE_CLIENTES = 'cancha_clientes_cache';
@@ -58,12 +59,11 @@ function generarId() {
   return `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
 }
 
-/** Hora concreta de hoy; si ya pasó, se asume para mañana a esa misma hora. */
+/** Hora concreta de hoy (en El Salvador); si ya pasó, se asume para mañana a esa misma hora. */
 function calcularFechaProgramada(hora: string) {
   const [h, m] = hora.split(':').map(Number);
-  const fecha = new Date();
-  fecha.setHours(h, m, 0, 0);
-  if (fecha.getTime() <= Date.now()) fecha.setDate(fecha.getDate() + 1);
+  const fecha = hoyNegocioALasHoras(h, m);
+  if (fecha.getTime() <= Date.now()) return new Date(fecha.getTime() + 24 * 60 * 60 * 1000);
   return fecha;
 }
 
@@ -104,7 +104,7 @@ export default function TabletPage() {
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
-    const tick = () => setReloj(new Date().toLocaleTimeString('es', { hour: '2-digit', minute: '2-digit' }));
+    const tick = () => setReloj(horaNegocioTexto());
     tick();
     const id = setInterval(tick, 15000);
     return () => clearInterval(id);
@@ -353,7 +353,7 @@ export default function TabletPage() {
     if (modoEnvio === 'programado') {
       const fechaEnvio = calcularFechaProgramada(horaProgramada);
       programarPedido(payload, fechaEnvio.toISOString());
-      mostrarToast(`Pedido programado para las ${fechaEnvio.toLocaleTimeString('es', { hour: '2-digit', minute: '2-digit' })}`);
+      mostrarToast(`Pedido programado para las ${horaNegocioTexto(fechaEnvio)}`);
       resetFormulario();
       return;
     }
@@ -518,7 +518,7 @@ export default function TabletPage() {
                   .map((p) => (
                     <li key={p.id}>
                       <span>
-                        {new Date(p.enviarEn).toLocaleTimeString('es', { hour: '2-digit', minute: '2-digit' })} ·{' '}
+                        {horaNegocioTexto(new Date(p.enviarEn))} ·{' '}
                         {p.clienteNombre}
                       </span>
                       <button className="quitar" onClick={() => cancelarProgramado(p.id)} title="Cancelar envío programado">

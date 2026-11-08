@@ -13,6 +13,7 @@ import {
 } from '@/lib/queries';
 import type { Pedido, EstadoPedido, MetodoPago, Rider, ConfigNegocio } from '@/lib/types';
 import { COSTO_DELIVERY_MIN, COSTO_DELIVERY_PASO } from '@/lib/constants';
+import { enHoraNegocio, hoyNegocioALasHoras, horaNegocioTexto, formatoNegocio } from '@/lib/timezone';
 
 const SIGUIENTE_ESTADO: Partial<Record<EstadoPedido, EstadoPedido>> = {
   pendiente: 'en_preparacion',
@@ -43,20 +44,18 @@ function claseEspera(mins: number) {
 }
 
 function formatoHoraEntrega(iso: string) {
-  return new Date(iso).toLocaleTimeString('es', { hour: '2-digit', minute: '2-digit' });
+  return horaNegocioTexto(new Date(iso));
 }
 
 function horaInputDe(iso: string | null) {
   if (!iso) return '';
-  const d = new Date(iso);
+  const d = enHoraNegocio(new Date(iso));
   return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
 }
 
 function calcularFechaEntrega(hora: string) {
   const [h, m] = hora.split(':').map(Number);
-  const d = new Date();
-  d.setHours(h, m, 0, 0);
-  return d;
+  return hoyNegocioALasHoras(h, m);
 }
 
 export default function CocinaPage() {
@@ -81,8 +80,7 @@ export default function CocinaPage() {
   const [guardandoEdit, setGuardandoEdit] = useState(false);
 
   useEffect(() => {
-    const tick = () =>
-      setReloj(new Date().toLocaleTimeString('es', { hour: '2-digit', minute: '2-digit', second: '2-digit' }));
+    const tick = () => setReloj(formatoNegocio(new Date(), { hour: '2-digit', minute: '2-digit', second: '2-digit' }));
     tick();
     const id = setInterval(tick, 1000);
     return () => clearInterval(id);

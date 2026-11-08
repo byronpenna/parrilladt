@@ -13,6 +13,7 @@ import {
   MUTATION_REGISTRAR_MOVIMIENTO_INSUMO,
 } from '@/lib/queries';
 import type { Insumo, MovimientoInsumo, TipoMovimientoInsumo } from '@/lib/types';
+import { formatoNegocio } from '@/lib/timezone';
 
 export default function StockPage() {
   const [insumos, setInsumos] = useState<Insumo[]>([]);
@@ -603,7 +604,7 @@ export default function StockPage() {
                                 <tbody>
                                   {historico[i.id].map((m) => (
                                     <tr key={m.id}>
-                                      <td>{new Date(m.createdAt).toLocaleString('es')}</td>
+                                      <td>{formatoNegocio(new Date(m.createdAt), { dateStyle: 'short', timeStyle: 'short' })}</td>
                                       <td>{m.tipo === 'carga' ? '⬆️ Carga' : '⬇️ Descarga'}</td>
                                       <td className="col-monto">{m.cantidad}</td>
                                       <td className="col-monto">${m.precioUnitario.toFixed(2)}</td>

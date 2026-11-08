@@ -14,13 +14,14 @@ import {
   MUTATION_ELIMINAR_CIERRE_DIA,
 } from '@/lib/queries';
 import type { Cuenta, TipoCuenta, CierreDia } from '@/lib/types';
+import { formatoNegocio } from '@/lib/timezone';
 
 function moneda(valor: number) {
   return `$${valor.toLocaleString('es', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
 
 function fechaHora(iso: string) {
-  return new Date(iso).toLocaleString('es', { dateStyle: 'medium', timeStyle: 'short' });
+  return formatoNegocio(new Date(iso), { dateStyle: 'medium', timeStyle: 'short' });
 }
 
 function claseDiferencia(d: number | null) {

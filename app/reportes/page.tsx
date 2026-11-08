@@ -7,6 +7,7 @@ import { gqlRequest } from '@/lib/graphql-client';
 import { QUERY_PEDIDOS_REPORTE } from '@/lib/queries';
 import type { Pedido, MetodoPago } from '@/lib/types';
 import VentasChart, { type PuntoVentaSerie } from '@/components/VentasChart';
+import { enHoraNegocio } from '@/lib/timezone';
 
 type Agrupacion = 'dia' | 'semana' | 'mes';
 
@@ -36,7 +37,7 @@ const AGRUPACION_CONFIG: Record<
 };
 
 function fechaLocal(iso: string) {
-  const d = new Date(iso);
+  const d = enHoraNegocio(new Date(iso));
   const y = d.getFullYear();
   const m = String(d.getMonth() + 1).padStart(2, '0');
   const dia = String(d.getDate()).padStart(2, '0');
@@ -44,9 +45,9 @@ function fechaLocal(iso: string) {
 }
 
 function isoDeHoyMenos(dias: number) {
-  const d = new Date();
+  const d = enHoraNegocio();
   d.setDate(d.getDate() - dias);
-  return fechaLocal(d.toISOString());
+  return claveFecha(d);
 }
 
 function lunesDe(d: Date) {
@@ -190,7 +191,7 @@ export default function ReportesPage() {
     const config = AGRUPACION_CONFIG[agrupacion];
     const finRango = fechaHasta
       ? inicioPeriodo(new Date(`${fechaHasta}T00:00:00`), agrupacion)
-      : inicioPeriodo(new Date(), agrupacion);
+      : inicioPeriodo(enHoraNegocio(), agrupacion);
     let inicioRango = fechaDesde
       ? inicioPeriodo(new Date(`${fechaDesde}T00:00:00`), agrupacion)
       : restarPeriodos(finRango, config.defaultPeriodos - 1, agrupacion);
@@ -205,7 +206,7 @@ export default function ReportesPage() {
     }
 
     for (const p of pedidosVenta) {
-      const inicioP = inicioPeriodo(new Date(p.createdAt), agrupacion);
+      const inicioP = inicioPeriodo(enHoraNegocio(new Date(p.createdAt)), agrupacion);
       const clave = claveFecha(inicioP);
       const bucket = buckets.get(clave);
       if (bucket) {

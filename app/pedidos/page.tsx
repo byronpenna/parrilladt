@@ -7,6 +7,7 @@ import LogoutButton from '@/components/LogoutButton';
 import { gqlRequest } from '@/lib/graphql-client';
 import { QUERY_PEDIDOS, MUTATION_ACTUALIZAR_ESTADO, MUTATION_ACTUALIZAR_PEDIDO } from '@/lib/queries';
 import type { Pedido, EstadoPedido, MetodoPago } from '@/lib/types';
+import { formatoNegocio } from '@/lib/timezone';
 
 const RAPIDOS = 'rapidos';
 const TODOS = 'todos';
@@ -167,7 +168,7 @@ export default function PedidosPage() {
         column: 'Fecha',
         type: String,
         width: 18,
-        value: (p: Pedido) => new Date(p.createdAt).toLocaleString('es', { dateStyle: 'short', timeStyle: 'short' }),
+        value: (p: Pedido) => formatoNegocio(new Date(p.createdAt), { dateStyle: 'short', timeStyle: 'short' }),
       },
       { column: 'Cliente', type: String, width: 22, value: (p: Pedido) => p.clienteNombre },
       { column: 'Items', type: String, width: 45, value: (p: Pedido) => p.itemsTexto },
@@ -344,7 +345,7 @@ export default function PedidosPage() {
                 {pedidosFiltrados.map((p) => (
                   <Fragment key={p.id}>
                   <tr>
-                    <td>{new Date(p.createdAt).toLocaleString('es', { dateStyle: 'short', timeStyle: 'short' })}</td>
+                    <td>{formatoNegocio(new Date(p.createdAt), { dateStyle: 'short', timeStyle: 'short' })}</td>
                     <td>{p.clienteNombre}</td>
                     <td>{p.itemsTexto}</td>
                     <td>{p.nota || '—'}</td>
