@@ -37,6 +37,7 @@ interface PedidoPendiente {
   riderId: string | null;
   costoDelivery: number;
   metodoPago: MetodoPago;
+  pagado: boolean;
   items: { menuItemId: string; nombre: string; cantidad: number; precioUnitario: number }[];
   clienteLat: number | null;
   clienteLng: number | null;
@@ -90,6 +91,7 @@ export default function TabletPage() {
   const [modalEnvioAbierto, setModalEnvioAbierto] = useState(false);
   const [metodoPago, setMetodoPago] = useState<MetodoPago>('efectivo');
   const [pagaCon, setPagaCon] = useState('');
+  const [pagado, setPagado] = useState(true);
   const [modoEnvio, setModoEnvio] = useState<'inmediato' | 'programado'>('inmediato');
   const [horaProgramada, setHoraProgramada] = useState('');
   const [programados, setProgramados] = useState<PedidoProgramado[]>([]);
@@ -308,6 +310,7 @@ export default function TabletPage() {
     setCostoDelivery(COSTO_DELIVERY_MIN);
     setMetodoPago('efectivo');
     setPagaCon('');
+    setPagado(true);
     setModoEnvio('inmediato');
     setHoraProgramada('');
     setClienteLat(null);
@@ -340,6 +343,7 @@ export default function TabletPage() {
       riderId: riderId || null,
       costoDelivery: riderId ? costoDelivery : 0,
       metodoPago,
+      pagado,
       items,
       clienteLat: riderId ? clienteLat : null,
       clienteLng: riderId ? clienteLng : null,
@@ -617,6 +621,22 @@ export default function TabletPage() {
               )}
             </>
           )}
+          <div className="metodo-pago-toggle">
+            <button
+              type="button"
+              className={`categoria-btn ${pagado ? 'activa' : ''}`}
+              onClick={() => setPagado(true)}
+            >
+              ✅ Pagado
+            </button>
+            <button
+              type="button"
+              className={`categoria-btn ${!pagado ? 'activa' : ''}`}
+              onClick={() => setPagado(false)}
+            >
+              ⏳ Sin pagar
+            </button>
+          </div>
           <div className="metodo-pago-toggle">
             <button
               type="button"

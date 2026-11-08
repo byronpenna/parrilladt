@@ -42,6 +42,7 @@ export interface PedidoItem {
 
 export interface PedidoEstadoEvento {
   estado: EstadoPedido;
+  motivo: string | null;
   createdAt: string;
 }
 
@@ -65,6 +66,8 @@ export interface Pedido {
   clienteLng: number | null;
   clienteDireccion: string | null;
   distanciaKm: number | null;
+  motivoCancelacion: string | null;
+  pagado: boolean;
 }
 
 export interface ConfigNegocio {

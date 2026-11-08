@@ -23,11 +23,13 @@ interface PedidoRow {
   costo_delivery: string;
   metodo_pago: string;
   hora_entrega: Date | null;
-  historial: { estado: string; createdAt: string }[];
+  historial: { estado: string; motivo: string | null; createdAt: string }[];
   cliente_lat: number | string | null;
   cliente_lng: number | string | null;
   cliente_direccion: string | null;
   distancia_km: string | null;
+  motivo_cancelacion: string | null;
+  pagado: boolean;
 }
 
 const RADIO_TIERRA_KM = 6371;
@@ -69,22 +71,25 @@ function shapePedido(row: PedidoRow) {
     horaEntrega: row.hora_entrega ? new Date(row.hora_entrega).toISOString() : null,
     historialEstados: (row.historial || []).map((h) => ({
       estado: h.estado,
+      motivo: h.motivo,
       createdAt: new Date(h.createdAt).toISOString(),
     })),
     clienteLat: row.cliente_lat !== null ? Number(row.cliente_lat) : null,
     clienteLng: row.cliente_lng !== null ? Number(row.cliente_lng) : null,
     clienteDireccion: row.cliente_direccion,
     distanciaKm: row.distancia_km !== null ? Number(row.distancia_km) : null,
+    motivoCancelacion: row.motivo_cancelacion,
+    pagado: row.pagado,
   };
 }
 
 const PEDIDO_SELECT = `
   SELECT p.id, p.cliente_nombre, p.nota, p.estado, p.total, p.created_at, p.updated_at,
     p.rider_id, r.nombre AS rider_nombre, p.costo_delivery, p.metodo_pago, p.hora_entrega,
-    p.cliente_lat, p.cliente_lng, p.cliente_direccion, p.distancia_km,
+    p.cliente_lat, p.cliente_lng, p.cliente_direccion, p.distancia_km, p.motivo_cancelacion, p.pagado,
     (
       SELECT COALESCE(
-        json_agg(json_build_object('estado', h.estado, 'createdAt', h.created_at) ORDER BY h.created_at),
+        json_agg(json_build_object('estado', h.estado, 'motivo', h.motivo, 'createdAt', h.created_at) ORDER BY h.created_at),
         '[]'
       )
       FROM pedido_estado_historial h
@@ -300,6 +305,7 @@ export const rootValue = {
     riderId,
     costoDelivery,
     metodoPago,
+    pagado,
     items,
     clienteLat,
     clienteLng,
@@ -310,6 +316,7 @@ export const rootValue = {
     riderId?: string;
     costoDelivery?: number;
     metodoPago?: string;
+    pagado?: boolean;
     items: { menuItemId?: string; nombre: string; cantidad: number; precioUnitario: number }[];
     clienteLat?: number;
     clienteLng?: number;
@@ -333,14 +340,15 @@ export const rootValue = {
     try {
       await client.query('BEGIN');
       const pedidoRes = await client.query(
-        `INSERT INTO pedidos (cliente_nombre, nota, rider_id, costo_delivery, metodo_pago, cliente_lat, cliente_lng, cliente_direccion, distancia_km)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING id`,
+        `INSERT INTO pedidos (cliente_nombre, nota, rider_id, costo_delivery, metodo_pago, pagado, cliente_lat, cliente_lng, cliente_direccion, distancia_km)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING id`,
         [
           clienteNombre,
           nota || null,
           riderId || null,
           costoDelivery || 0,
           metodoPago || 'efectivo',
+          pagado ?? true,
           clienteLat ?? null,
           clienteLng ?? null,
           clienteDireccion || null,
@@ -368,14 +376,22 @@ export const rootValue = {
     }
   },
 
-  actualizarEstado: async ({ id, estado }: { id: string; estado: string }) => {
+  actualizarEstado: async ({ id, estado, motivo }: { id: string; estado: string; motivo?: string }) => {
     const pool = await getPool();
     const client = await pool.connect();
+    const motivoCancelacion = estado === 'cancelado' ? motivo?.trim() || 'Error al ingresar' : null;
     try {
       await client.query('BEGIN');
-      const res = await client.query('UPDATE pedidos SET estado = $1 WHERE id = $2 RETURNING id', [estado, id]);
+      const res = await client.query(
+        `UPDATE pedidos SET estado = $1, motivo_cancelacion = $3 WHERE id = $2 RETURNING id`,
+        [estado, id, motivoCancelacion]
+      );
       if (res.rowCount === 0) throw new Error(`Pedido ${id} no encontrado`);
-      await client.query('INSERT INTO pedido_estado_historial (pedido_id, estado) VALUES ($1, $2)', [id, estado]);
+      await client.query('INSERT INTO pedido_estado_historial (pedido_id, estado, motivo) VALUES ($1, $2, $3)', [
+        id,
+        estado,
+        motivoCancelacion,
+      ]);
       await client.query('COMMIT');
     } catch (err) {
       await client.query('ROLLBACK');
@@ -390,6 +406,7 @@ export const rootValue = {
     id: string;
     riderId?: string | null;
     metodoPago?: string;
+    pagado?: boolean;
     horaEntrega?: string | null;
     costoDelivery?: number;
     clienteLat?: number | null;
@@ -408,6 +425,11 @@ export const rootValue = {
     if (args.metodoPago) {
       sets.push(`metodo_pago = $${i++}`);
       values.push(args.metodoPago);
+    }
+    // hasOwnProperty: pagado es boolean, "false" es un valor válido a guardar
+    if (Object.prototype.hasOwnProperty.call(args, 'pagado')) {
+      sets.push(`pagado = $${i++}`);
+      values.push(args.pagado);
     }
     if (Object.prototype.hasOwnProperty.call(args, 'horaEntrega')) {
       sets.push(`hora_entrega = $${i++}`);

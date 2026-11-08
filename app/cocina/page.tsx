@@ -220,6 +220,17 @@ export default function CocinaPage() {
     cargarPedidos();
   }
 
+  async function togglePagado(p: Pedido, e: MouseEvent) {
+    e.stopPropagation();
+    const nuevoPagado = !p.pagado;
+    setPedidos((prev) => prev.map((x) => (x.id === p.id ? { ...x, pagado: nuevoPagado } : x)));
+    try {
+      await gqlRequest(MUTATION_ACTUALIZAR_PEDIDO, { id: p.id, pagado: nuevoPagado });
+    } catch {
+      cargarPedidos();
+    }
+  }
+
   const referenciaNegocio = useMemo(
     () => (configNegocio ? { lat: configNegocio.latitud, lng: configNegocio.longitud, etiqueta: 'Negocio' } : null),
     [configNegocio]
@@ -281,6 +292,13 @@ export default function CocinaPage() {
                         <span className="pedido-meta-chip">
                           {p.metodoPago === 'efectivo' ? '💵 Efectivo' : '🏦 Transferencia'}
                         </span>
+                        <button
+                          type="button"
+                          className={`pedido-meta-chip chip-pagado ${p.pagado ? 'chip-pagado-si' : 'chip-pagado-no'}`}
+                          onClick={(e) => togglePagado(p, e)}
+                        >
+                          {p.pagado ? '✅ Pagado' : '⏳ Sin pagar'}
+                        </button>
                         {p.horaEntrega && (
                           <span className="pedido-meta-chip">🕒 {formatoHoraEntrega(p.horaEntrega)}</span>
                         )}

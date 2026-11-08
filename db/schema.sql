@@ -142,6 +142,14 @@ ALTER TABLE pedidos ADD COLUMN IF NOT EXISTS cliente_lng DOUBLE PRECISION;
 ALTER TABLE pedidos ADD COLUMN IF NOT EXISTS cliente_direccion TEXT;
 ALTER TABLE pedidos ADD COLUMN IF NOT EXISTS distancia_km NUMERIC(6,2);
 
+-- motivo de la cancelación (si el pedido fue cancelado); lo pone el admin
+-- al momento de cancelar, con "Error al ingresar" como texto por defecto
+ALTER TABLE pedidos ADD COLUMN IF NOT EXISTS motivo_cancelacion TEXT;
+
+-- estado de pago, independiente del método; por defecto pagado = true,
+-- editable desde cocina y pedidos cuando en realidad quedó debiendo
+ALTER TABLE pedidos ADD COLUMN IF NOT EXISTS pagado BOOLEAN NOT NULL DEFAULT true;
+
 CREATE INDEX IF NOT EXISTS pedidos_estado_idx ON pedidos (estado) WHERE estado <> 'entregado';
 CREATE INDEX IF NOT EXISTS pedidos_created_at_idx ON pedidos (created_at);
 CREATE INDEX IF NOT EXISTS pedidos_rider_id_idx ON pedidos (rider_id);
@@ -178,8 +186,12 @@ CREATE TABLE IF NOT EXISTS pedido_estado_historial (
     id          BIGSERIAL PRIMARY KEY,
     pedido_id   BIGINT NOT NULL REFERENCES pedidos(id) ON DELETE CASCADE,
     estado      estado_pedido NOT NULL,
+    motivo      TEXT,            -- solo se usa al pasar a 'cancelado'
     created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+
+-- pedido_estado_historial ya existía sin esta columna en instalaciones previas
+ALTER TABLE pedido_estado_historial ADD COLUMN IF NOT EXISTS motivo TEXT;
 
 CREATE INDEX IF NOT EXISTS pedido_estado_historial_pedido_id_idx ON pedido_estado_historial (pedido_id);
 

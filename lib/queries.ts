@@ -37,6 +37,8 @@ export const QUERY_PEDIDOS = `
       clienteLng
       clienteDireccion
       distanciaKm
+      motivoCancelacion
+      pagado
     }
   }
 `;
@@ -80,6 +82,7 @@ export const MUTATION_CREAR_PEDIDO = `
     $riderId: ID
     $costoDelivery: Float
     $metodoPago: MetodoPago
+    $pagado: Boolean
     $items: [ItemInput!]!
     $clienteLat: Float
     $clienteLng: Float
@@ -91,6 +94,7 @@ export const MUTATION_CREAR_PEDIDO = `
       riderId: $riderId
       costoDelivery: $costoDelivery
       metodoPago: $metodoPago
+      pagado: $pagado
       items: $items
       clienteLat: $clienteLat
       clienteLng: $clienteLng
@@ -102,10 +106,11 @@ export const MUTATION_CREAR_PEDIDO = `
 `;
 
 export const MUTATION_ACTUALIZAR_ESTADO = `
-  mutation ActualizarEstado($id: ID!, $estado: EstadoPedido!) {
-    actualizarEstado(id: $id, estado: $estado) {
+  mutation ActualizarEstado($id: ID!, $estado: EstadoPedido!, $motivo: String) {
+    actualizarEstado(id: $id, estado: $estado, motivo: $motivo) {
       id
       estado
+      motivoCancelacion
     }
   }
 `;
@@ -115,6 +120,7 @@ export const MUTATION_ACTUALIZAR_PEDIDO = `
     $id: ID!
     $riderId: ID
     $metodoPago: MetodoPago
+    $pagado: Boolean
     $horaEntrega: String
     $costoDelivery: Float
     $clienteLat: Float
@@ -125,6 +131,7 @@ export const MUTATION_ACTUALIZAR_PEDIDO = `
       id: $id
       riderId: $riderId
       metodoPago: $metodoPago
+      pagado: $pagado
       horaEntrega: $horaEntrega
       costoDelivery: $costoDelivery
       clienteLat: $clienteLat
@@ -136,6 +143,7 @@ export const MUTATION_ACTUALIZAR_PEDIDO = `
       riderNombre
       costoDelivery
       metodoPago
+      pagado
       horaEntrega
       clienteLat
       clienteLng

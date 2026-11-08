@@ -1,15 +1,16 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useMemo, useState } from 'react';
+import { Fragment, useEffect, useMemo, useState } from 'react';
 import writeXlsxFile from 'write-excel-file';
 import LogoutButton from '@/components/LogoutButton';
 import { gqlRequest } from '@/lib/graphql-client';
-import { QUERY_PEDIDOS } from '@/lib/queries';
+import { QUERY_PEDIDOS, MUTATION_ACTUALIZAR_ESTADO, MUTATION_ACTUALIZAR_PEDIDO } from '@/lib/queries';
 import type { Pedido, EstadoPedido, MetodoPago } from '@/lib/types';
 
 const RAPIDOS = 'rapidos';
 const TODOS = 'todos';
+const MOTIVO_DEFAULT = 'Error al ingresar';
 
 const ESTADO_LABEL: Record<EstadoPedido, string> = {
   pendiente: 'Pendiente',
@@ -56,6 +57,11 @@ export default function PedidosPage() {
   const [fechaDesde, setFechaDesde] = useState('');
   const [fechaHasta, setFechaHasta] = useState('');
   const [orden, setOrden] = useState<Orden>('fecha_desc');
+
+  const [cancelandoId, setCancelandoId] = useState<string | null>(null);
+  const [motivoCancelacion, setMotivoCancelacion] = useState(MOTIVO_DEFAULT);
+  const [guardandoCancelacion, setGuardandoCancelacion] = useState(false);
+  const [errorCancelacion, setErrorCancelacion] = useState('');
 
   useEffect(() => {
     cargarPedidos();
@@ -107,7 +113,53 @@ export default function PedidosPage() {
     return resultado;
   }, [pedidos, filtroCliente, filtroEstado, filtroMetodoPago, fechaDesde, fechaHasta, orden]);
 
-  const totalMostrado = pedidosFiltrados.reduce((s, p) => s + p.total, 0);
+  // los cancelados no se suman al total mostrado salvo que el filtro de
+  // estado sea justo "cancelado" (ahí sí se quiere ver cuánto representaban)
+  const totalMostrado = pedidosFiltrados
+    .filter((p) => filtroEstado === 'cancelado' || p.estado !== 'cancelado')
+    .reduce((s, p) => s + p.total, 0);
+
+  function abrirCancelacion(p: Pedido) {
+    setCancelandoId(p.id);
+    setMotivoCancelacion(MOTIVO_DEFAULT);
+    setErrorCancelacion('');
+  }
+
+  function cerrarCancelacion() {
+    setCancelandoId(null);
+  }
+
+  async function confirmarCancelacion(p: Pedido) {
+    setGuardandoCancelacion(true);
+    setErrorCancelacion('');
+    try {
+      const data = await gqlRequest<{ actualizarEstado: Pedido }>(MUTATION_ACTUALIZAR_ESTADO, {
+        id: p.id,
+        estado: 'cancelado',
+        motivo: motivoCancelacion.trim() || MOTIVO_DEFAULT,
+      });
+      setPedidos((prev) =>
+        prev.map((x) =>
+          x.id === p.id ? { ...x, estado: 'cancelado', motivoCancelacion: data.actualizarEstado.motivoCancelacion } : x
+        )
+      );
+      setCancelandoId(null);
+    } catch (e) {
+      setErrorCancelacion(e instanceof Error ? e.message : 'No se pudo cancelar el pedido');
+    } finally {
+      setGuardandoCancelacion(false);
+    }
+  }
+
+  async function togglePagado(p: Pedido) {
+    const nuevoPagado = !p.pagado;
+    setPedidos((prev) => prev.map((x) => (x.id === p.id ? { ...x, pagado: nuevoPagado } : x)));
+    try {
+      await gqlRequest(MUTATION_ACTUALIZAR_PEDIDO, { id: p.id, pagado: nuevoPagado });
+    } catch {
+      cargarPedidos();
+    }
+  }
 
   async function exportarExcel() {
     const schema = [
@@ -124,6 +176,7 @@ export default function PedidosPage() {
       { column: 'Rider', type: String, width: 18, value: (p: Pedido) => p.riderNombre || '' },
       { column: 'Delivery', type: Number, format: '0.00', width: 12, value: (p: Pedido) => p.costoDelivery },
       { column: 'Pago', type: String, width: 14, value: (p: Pedido) => METODO_PAGO_LABEL[p.metodoPago] },
+      { column: 'Pagado', type: String, width: 10, value: (p: Pedido) => (p.pagado ? 'Sí' : 'No') },
       { column: 'Total', type: Number, format: '0.00', width: 12, value: (p: Pedido) => p.total },
     ];
 
@@ -279,18 +332,24 @@ export default function PedidosPage() {
                   <th>Delivery</th>
                   <th>Distancia</th>
                   <th>Pago</th>
+                  <th>Pagado</th>
                   <th>Total</th>
+                  <th>Acciones</th>
                 </tr>
               </thead>
               <tbody>
                 {pedidosFiltrados.map((p) => (
-                  <tr key={p.id}>
+                  <Fragment key={p.id}>
+                  <tr>
                     <td>{new Date(p.createdAt).toLocaleString('es', { dateStyle: 'short', timeStyle: 'short' })}</td>
                     <td>{p.clienteNombre}</td>
                     <td>{p.itemsTexto}</td>
                     <td>{p.nota || '—'}</td>
                     <td>
                       <span className={`estado-badge estado-${p.estado}`}>{ESTADO_LABEL[p.estado]}</span>
+                      {p.estado === 'cancelado' && p.motivoCancelacion && (
+                        <div className="motivo-cancelacion">{p.motivoCancelacion}</div>
+                      )}
                     </td>
                     <td>{p.riderNombre || '—'}</td>
                     <td className="col-monto">{p.riderNombre ? `$${p.costoDelivery.toFixed(2)}` : '—'}</td>
@@ -310,14 +369,62 @@ export default function PedidosPage() {
                       )}
                     </td>
                     <td>{METODO_PAGO_LABEL[p.metodoPago]}</td>
+                    <td>
+                      <button
+                        className={`btn ${p.pagado ? 'btn-verde' : 'btn-naranja'}`}
+                        onClick={() => togglePagado(p)}
+                      >
+                        {p.pagado ? '✅ Pagado' : '⏳ Sin pagar'}
+                      </button>
+                    </td>
                     <td className="col-monto">${p.total.toFixed(2)}</td>
+                    <td className="acciones-productos">
+                      {p.estado !== 'cancelado' && (
+                        <button className="btn btn-naranja" onClick={() => abrirCancelacion(p)}>
+                          Cancelar
+                        </button>
+                      )}
+                    </td>
                   </tr>
+                  {cancelandoId === p.id && (
+                    <tr>
+                      <td colSpan={12}>
+                        <div className="panel-movimiento">
+                          <strong>Cancelar pedido de {p.clienteNombre}</strong>
+                          <div className="filtro-campo" style={{ minWidth: 280 }}>
+                            <label>Motivo</label>
+                            <input
+                              value={motivoCancelacion}
+                              onChange={(e) => setMotivoCancelacion(e.target.value)}
+                              autoFocus
+                            />
+                          </div>
+                          <button
+                            className="btn btn-naranja"
+                            disabled={guardandoCancelacion}
+                            onClick={() => confirmarCancelacion(p)}
+                          >
+                            Confirmar cancelación
+                          </button>
+                          <button className="btn btn-blanco" onClick={cerrarCancelacion}>
+                            Volver
+                          </button>
+                          {errorCancelacion && <div className="pedidos-error">{errorCancelacion}</div>}
+                        </div>
+                      </td>
+                    </tr>
+                  )}
+                  </Fragment>
                 ))}
               </tbody>
               <tfoot>
                 <tr>
-                  <td colSpan={8}>Total mostrado</td>
+                  <td colSpan={10}>
+                    Total mostrado
+                    {filtroEstado !== 'cancelado' && ' (sin cancelados)'}
+                  </td>
                   <td className="col-monto">${totalMostrado.toFixed(2)}</td>
+                  <td></td>
                 </tr>
               </tfoot>
             </table>

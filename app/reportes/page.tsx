@@ -136,6 +136,7 @@ export default function ReportesPage() {
   const [fechaDesde, setFechaDesde] = useState('');
   const [fechaHasta, setFechaHasta] = useState('');
   const [agrupacion, setAgrupacion] = useState<Agrupacion>('semana');
+  const [filtroEstado, setFiltroEstado] = useState<'activos' | 'cancelado'>('activos');
 
   useEffect(() => {
     cargarPedidos();
@@ -162,9 +163,15 @@ export default function ReportesPage() {
   function limpiarFiltros() {
     setFechaDesde('');
     setFechaHasta('');
+    setFiltroEstado('activos');
   }
 
-  const pedidosVenta = useMemo(() => pedidos.filter((p) => p.estado !== 'cancelado'), [pedidos]);
+  // por defecto se excluyen los cancelados de las ventas; solo se incluyen
+  // (y solo ellos) cuando el filtro de estado está puesto en "Cancelados"
+  const pedidosVenta = useMemo(
+    () => pedidos.filter((p) => (filtroEstado === 'cancelado' ? p.estado === 'cancelado' : p.estado !== 'cancelado')),
+    [pedidos, filtroEstado]
+  );
 
   const pedidosEnRango = useMemo(() => {
     return pedidosVenta.filter((p) => {
@@ -308,6 +315,18 @@ export default function ReportesPage() {
           </button>
 
           <div className="filtro-campo">
+            <label htmlFor="filtroEstadoReporte">Estado</label>
+            <select
+              id="filtroEstadoReporte"
+              value={filtroEstado}
+              onChange={(e) => setFiltroEstado(e.target.value as 'activos' | 'cancelado')}
+            >
+              <option value="activos">Activos (sin cancelados)</option>
+              <option value="cancelado">Cancelados</option>
+            </select>
+          </div>
+
+          <div className="filtro-campo">
             <label>Agrupar por</label>
             <div className="agrupador-toggle">
               {AGRUPACION_OPCIONES.map((o) => (
@@ -332,7 +351,7 @@ export default function ReportesPage() {
           <>
             <div className="kpi-grid">
               <div className="kpi-card card-blanca">
-                <div className="kpi-label">Ventas totales</div>
+                <div className="kpi-label">{filtroEstado === 'cancelado' ? 'Total cancelado' : 'Ventas totales'}</div>
                 <div className="kpi-valor">{moneda(totalVentas)}</div>
               </div>
               <div className="kpi-card card-blanca">

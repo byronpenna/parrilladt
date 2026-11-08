@@ -55,6 +55,7 @@ export const schema = buildSchema(`
 
   type PedidoEstadoEvento {
     estado: EstadoPedido!
+    motivo: String
     createdAt: String!
   }
 
@@ -78,6 +79,8 @@ export const schema = buildSchema(`
     clienteLng: Float
     clienteDireccion: String
     distanciaKm: Float
+    motivoCancelacion: String
+    pagado: Boolean!
   }
 
   type ConfigNegocio {
@@ -147,16 +150,18 @@ export const schema = buildSchema(`
       riderId: ID
       costoDelivery: Float
       metodoPago: MetodoPago
+      pagado: Boolean
       items: [ItemInput!]!
       clienteLat: Float
       clienteLng: Float
       clienteDireccion: String
     ): Pedido!
-    actualizarEstado(id: ID!, estado: EstadoPedido!): Pedido!
+    actualizarEstado(id: ID!, estado: EstadoPedido!, motivo: String): Pedido!
     actualizarPedido(
       id: ID!
       riderId: ID
       metodoPago: MetodoPago
+      pagado: Boolean
       horaEntrega: String
       costoDelivery: Float
       clienteLat: Float
