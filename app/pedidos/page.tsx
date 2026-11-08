@@ -114,13 +114,11 @@ export default function PedidosPage() {
     return resultado;
   }, [pedidos, filtroCliente, filtroEstado, filtroMetodoPago, fechaDesde, fechaHasta, orden]);
 
-  // los cancelados no se suman al total mostrado salvo que el filtro de
-  // estado sea justo "cancelado" (ahí sí se quiere ver cuánto representaban)
-  const pedidosParaTotal = pedidosFiltrados.filter(
-    (p) => filtroEstado === 'cancelado' || p.estado !== 'cancelado'
-  );
+  // los cancelados nunca se suman a los totales mostrados
+  const pedidosParaTotal = pedidosFiltrados.filter((p) => p.estado !== 'cancelado');
   const totalMostrado = pedidosParaTotal.reduce((s, p) => s + p.total, 0);
   const totalMostradoSinDelivery = pedidosParaTotal.reduce((s, p) => s + (p.total - p.costoDelivery), 0);
+  const totalDelivery = pedidosParaTotal.reduce((s, p) => s + p.costoDelivery, 0);
 
   function abrirCancelacion(p: Pedido) {
     setCancelandoId(p.id);
@@ -159,6 +157,16 @@ export default function PedidosPage() {
     setPedidos((prev) => prev.map((x) => (x.id === p.id ? { ...x, pagado: nuevoPagado } : x)));
     try {
       await gqlRequest(MUTATION_ACTUALIZAR_PEDIDO, { id: p.id, pagado: nuevoPagado });
+    } catch {
+      cargarPedidos();
+    }
+  }
+
+  async function toggleMetodoPago(p: Pedido) {
+    const nuevoMetodo: MetodoPago = p.metodoPago === 'efectivo' ? 'transferencia' : 'efectivo';
+    setPedidos((prev) => prev.map((x) => (x.id === p.id ? { ...x, metodoPago: nuevoMetodo } : x)));
+    try {
+      await gqlRequest(MUTATION_ACTUALIZAR_PEDIDO, { id: p.id, metodoPago: nuevoMetodo });
     } catch {
       cargarPedidos();
     }
@@ -375,7 +383,14 @@ export default function PedidosPage() {
                         </>
                       )}
                     </td>
-                    <td>{METODO_PAGO_LABEL[p.metodoPago]}</td>
+                    <td>
+                      <button
+                        className={`btn ${p.metodoPago === 'efectivo' ? 'btn-verde' : 'btn-naranja'}`}
+                        onClick={() => toggleMetodoPago(p)}
+                      >
+                        {p.metodoPago === 'efectivo' ? '💵' : '🏦'} {METODO_PAGO_LABEL[p.metodoPago]}
+                      </button>
+                    </td>
                     <td>
                       <button
                         className={`btn ${p.pagado ? 'btn-verde' : 'btn-naranja'}`}
@@ -427,10 +442,9 @@ export default function PedidosPage() {
               </tbody>
               <tfoot>
                 <tr>
-                  <td colSpan={10}>
-                    Total mostrado
-                    {filtroEstado !== 'cancelado' && ' (sin cancelados)'}
-                  </td>
+                  <td colSpan={6}>Total mostrado (sin cancelados)</td>
+                  <td className="col-monto">${totalDelivery.toFixed(2)}</td>
+                  <td colSpan={3}></td>
                   <td className="col-monto">${totalMostradoSinDelivery.toFixed(2)}</td>
                   <td className="col-monto">${totalMostrado.toFixed(2)}</td>
                   <td></td>
