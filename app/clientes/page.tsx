@@ -148,6 +148,9 @@ export default function ClientesPage() {
           <Link href="/stock" className="btn btn-blanco">
             📦 Stock
           </Link>
+          <Link href="/caja" className="btn btn-blanco">
+            💰 Caja
+          </Link>
           <Link href="/configuracion" className="btn btn-blanco">
             ⚙️ Config
           </Link>

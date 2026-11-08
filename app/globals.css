@@ -513,6 +513,38 @@ html, body {
 .tabla-historico { margin: 4px 0; }
 .tabla-historico th, .tabla-historico td { padding: 6px 10px; font-size: 0.9rem; }
 .acciones-productos { display: flex; gap: 8px; flex-wrap: wrap; }
+
+.panel-caja {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  align-items: flex-start;
+}
+.panel-caja .filtro-campo { width: 100%; max-width: 320px; }
+.panel-caja table { width: 100%; }
+
+.caja-estado-card { gap: 10px; }
+.caja-estado-card .btn { align-self: flex-start; }
+
+.caja-qr-celda { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.caja-qr-miniatura {
+  width: 42px;
+  height: 42px;
+  object-fit: cover;
+  border-radius: 6px;
+  border: 2px solid var(--verde-claro);
+}
+.caja-qr-input { max-width: 150px; font-size: 0.78rem; }
+
+.caja-diferencias { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 8px; }
+.caja-diferencia-chip {
+  padding: 8px 16px;
+  border-radius: 10px;
+  font-weight: 700;
+}
+.diferencia-ok { background: #e3f3e8; color: var(--verde-oscuro); }
+.diferencia-faltante { background: #fdecec; color: #c0392b; }
+.diferencia-sobrante { background: #fff6e8; color: var(--naranja-oscuro); }
 .acciones-productos .btn { padding: 8px 12px; font-size: 0.85rem; }
 .tabla-pedidos td input,
 .tabla-pedidos td select {

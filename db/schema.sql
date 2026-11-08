@@ -103,6 +103,66 @@ CREATE TABLE IF NOT EXISTS insumo_movimientos (
 CREATE INDEX IF NOT EXISTS insumo_movimientos_insumo_id_idx ON insumo_movimientos (insumo_id);
 CREATE INDEX IF NOT EXISTS insumo_movimientos_created_at_idx ON insumo_movimientos (created_at);
 
+-- ── Caja: cuentas, apertura y cierre de día ─────────────────────────────
+-- Arqueo de caja estándar: cada cuenta (efectivo o banco) declara un monto
+-- de apertura al iniciar el día y un monto real contado al cerrarlo; las
+-- ventas del día quedan congeladas en cierres_dia al cerrar, para comparar
+-- lo esperado contra lo contado sin depender de que los pedidos cambien
+-- después.
+DO $$ BEGIN
+    CREATE TYPE tipo_cuenta AS ENUM ('efectivo', 'banco');
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
+CREATE TABLE IF NOT EXISTS cuentas (
+    id          BIGSERIAL PRIMARY KEY,
+    nombre      TEXT NOT NULL,
+    tipo        tipo_cuenta NOT NULL,
+    activa      BOOLEAN NOT NULL DEFAULT true,
+    qr_key      TEXT,            -- QR de cobro (solo bancos), objeto en el bucket público de fotos
+    created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- cuentas ya existía sin esta columna en instalaciones previas
+ALTER TABLE cuentas ADD COLUMN IF NOT EXISTS qr_key TEXT;
+
+CREATE UNIQUE INDEX IF NOT EXISTS cuentas_nombre_unique ON cuentas (lower(trim(nombre)));
+CREATE INDEX IF NOT EXISTS cuentas_activa_idx ON cuentas (activa);
+
+DO $$ BEGIN
+    CREATE TYPE estado_cierre_dia AS ENUM ('abierto', 'cerrado');
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
+CREATE TABLE IF NOT EXISTS cierres_dia (
+    id                    BIGSERIAL PRIMARY KEY,
+    fecha                 DATE NOT NULL UNIQUE,
+    estado                estado_cierre_dia NOT NULL DEFAULT 'abierto',
+    abierto_en            TIMESTAMPTZ NOT NULL DEFAULT now(),
+    cerrado_en            TIMESTAMPTZ,
+    nota_apertura         TEXT,
+    nota_cierre           TEXT,
+    -- se congelan recién al cerrar (NULL mientras el día sigue abierto)
+    ventas_efectivo       NUMERIC(12,2),
+    ventas_transferencia  NUMERIC(12,2),
+    ventas_total          NUMERIC(12,2),
+    created_at            TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS cierres_dia_fecha_idx ON cierres_dia (fecha);
+
+CREATE TABLE IF NOT EXISTS cierre_cuenta_detalle (
+    id                 BIGSERIAL PRIMARY KEY,
+    cierre_dia_id      BIGINT NOT NULL REFERENCES cierres_dia(id) ON DELETE CASCADE,
+    cuenta_id          BIGINT NOT NULL REFERENCES cuentas(id) ON DELETE RESTRICT,
+    monto_apertura     NUMERIC(12,2) NOT NULL DEFAULT 0,
+    monto_cierre_real  NUMERIC(12,2),        -- NULL hasta que se cierra el día
+    created_at         TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at         TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS cierre_cuenta_detalle_unique ON cierre_cuenta_detalle (cierre_dia_id, cuenta_id);
+
 -- ── Pedidos ─────────────────────────────────────────────────────────────
 DO $$ BEGIN
     CREATE TYPE estado_pedido AS ENUM (
@@ -220,6 +280,10 @@ CREATE OR REPLACE TRIGGER insumos_set_updated_at
     BEFORE UPDATE ON insumos
     FOR EACH ROW EXECUTE FUNCTION set_updated_at();
 
+CREATE OR REPLACE TRIGGER cierre_cuenta_detalle_set_updated_at
+    BEFORE UPDATE ON cierre_cuenta_detalle
+    FOR EACH ROW EXECUTE FUNCTION set_updated_at();
+
 CREATE OR REPLACE FUNCTION recalcular_total_pedido()
 RETURNS TRIGGER AS $$
 BEGIN
@@ -263,3 +327,7 @@ INSERT INTO menu_items (nombre, categoria, precio) VALUES
     ('Hatrick (3 carnes)', 'Combos', 9),
     ('Parrillada campeona', 'Combos', 7)
 ON CONFLICT (nombre) DO NOTHING;
+
+-- ── seed de cuentas: siempre debe existir al menos la caja de efectivo ──
+INSERT INTO cuentas (nombre, tipo) VALUES ('Efectivo', 'efectivo')
+ON CONFLICT (lower(trim(nombre))) DO NOTHING;

@@ -318,6 +318,9 @@ export default function StockPage() {
           <Link href="/reportes" className="btn btn-blanco">
             📈 Reportes
           </Link>
+          <Link href="/caja" className="btn btn-blanco">
+            💰 Caja
+          </Link>
           <Link href="/configuracion" className="btn btn-blanco">
             ⚙️ Config
           </Link>

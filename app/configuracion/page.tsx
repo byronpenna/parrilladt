@@ -97,6 +97,9 @@ export default function ConfiguracionPage() {
           <Link href="/stock" className="btn btn-blanco">
             📦 Stock
           </Link>
+          <Link href="/caja" className="btn btn-blanco">
+            💰 Caja
+          </Link>
         </div>
       </header>
 

@@ -320,3 +320,74 @@ export const MUTATION_REGISTRAR_MOVIMIENTO_INSUMO = `
     }
   }
 `;
+
+const CIERRE_DIA_CAMPOS = `
+  id
+  fecha
+  estado
+  abiertoEn
+  cerradoEn
+  notaApertura
+  notaCierre
+  ventasEfectivo
+  ventasTransferencia
+  ventasTotal
+  diferenciaEfectivo
+  diferenciaBanco
+  detalles {
+    id
+    cuentaId
+    cuentaNombre
+    cuentaTipo
+    montoApertura
+    montoCierreReal
+  }
+`;
+
+export const QUERY_CUENTAS = `
+  query { cuentas { id nombre tipo activa saldoActual qrUrl } }
+`;
+
+export const MUTATION_CREAR_CUENTA = `
+  mutation CrearCuenta($nombre: String!, $tipo: TipoCuenta!) {
+    crearCuenta(nombre: $nombre, tipo: $tipo) {
+      id nombre tipo activa saldoActual qrUrl
+    }
+  }
+`;
+
+export const MUTATION_ACTUALIZAR_CUENTA = `
+  mutation ActualizarCuenta($id: ID!, $nombre: String, $activa: Boolean, $qrKey: String) {
+    actualizarCuenta(id: $id, nombre: $nombre, activa: $activa, qrKey: $qrKey) {
+      id nombre tipo activa saldoActual qrUrl
+    }
+  }
+`;
+
+export const QUERY_CIERRE_DIA_ACTUAL = `
+  query { cierreDiaActual { ${CIERRE_DIA_CAMPOS} } }
+`;
+
+export const QUERY_CIERRES_DIA = `
+  query CierresDia($limite: Int) {
+    cierresDia(limite: $limite) { ${CIERRE_DIA_CAMPOS} }
+  }
+`;
+
+export const MUTATION_ABRIR_DIA = `
+  mutation AbrirDia($aperturas: [AperturaCuentaInput!]!, $nota: String) {
+    abrirDia(aperturas: $aperturas, nota: $nota) { ${CIERRE_DIA_CAMPOS} }
+  }
+`;
+
+export const MUTATION_CERRAR_DIA = `
+  mutation CerrarDia($cierreDiaId: ID!, $cierres: [CierreCuentaInput!]!, $nota: String) {
+    cerrarDia(cierreDiaId: $cierreDiaId, cierres: $cierres, nota: $nota) { ${CIERRE_DIA_CAMPOS} }
+  }
+`;
+
+export const MUTATION_ELIMINAR_CIERRE_DIA = `
+  mutation EliminarCierreDia($id: ID!) {
+    eliminarCierreDia(id: $id)
+  }
+`;

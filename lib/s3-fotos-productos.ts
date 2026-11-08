@@ -20,6 +20,11 @@ export function buildFotoKey(menuItemId: string, fileName: string) {
   return `menu-item-${menuItemId}/${Date.now()}-${randomUUID()}.${ext}`;
 }
 
+export function buildQrKey(cuentaId: string, fileName: string) {
+  const ext = (fileName.split('.').pop() || 'png').toLowerCase();
+  return `cuentas-qr/${cuentaId}/${Date.now()}-${randomUUID()}.${ext}`;
+}
+
 export async function getFotoUploadUrl(key: string) {
   const ext = (key.split('.').pop() || 'jpg').toLowerCase();
   const contentType = CONTENT_TYPES[ext] || 'application/octet-stream';

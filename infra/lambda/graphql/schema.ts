@@ -14,6 +14,50 @@ export const schema = buildSchema(`
     transferencia
   }
 
+  enum TipoCuenta {
+    efectivo
+    banco
+  }
+
+  enum EstadoCierreDia {
+    abierto
+    cerrado
+  }
+
+  type Cuenta {
+    id: ID!
+    nombre: String!
+    tipo: TipoCuenta!
+    activa: Boolean!
+    saldoActual: Float!
+    qrUrl: String
+  }
+
+  type CierreCuentaDetalle {
+    id: ID!
+    cuentaId: ID!
+    cuentaNombre: String!
+    cuentaTipo: TipoCuenta!
+    montoApertura: Float!
+    montoCierreReal: Float
+  }
+
+  type CierreDia {
+    id: ID!
+    fecha: String!
+    estado: EstadoCierreDia!
+    abiertoEn: String!
+    cerradoEn: String
+    notaApertura: String
+    notaCierre: String
+    ventasEfectivo: Float
+    ventasTransferencia: Float
+    ventasTotal: Float
+    detalles: [CierreCuentaDetalle!]!
+    diferenciaEfectivo: Float
+    diferenciaBanco: Float
+  }
+
   type MenuItem {
     id: ID!
     nombre: String!
@@ -128,6 +172,9 @@ export const schema = buildSchema(`
     insumos: [Insumo!]!
     fotosMenuItem(menuItemId: ID!): [FotoMenuItem!]!
     movimientosInsumo(insumoId: ID!): [MovimientoInsumo!]!
+    cuentas: [Cuenta!]!
+    cierresDia(limite: Int): [CierreDia!]!
+    cierreDiaActual: CierreDia
   }
 
   input ItemInput {
@@ -141,6 +188,16 @@ export const schema = buildSchema(`
     nombre: String!
     categoria: String!
     precio: Float!
+  }
+
+  input AperturaCuentaInput {
+    cuentaId: ID!
+    montoApertura: Float!
+  }
+
+  input CierreCuentaInput {
+    cuentaId: ID!
+    montoCierreReal: Float!
   }
 
   type Mutation {
@@ -185,6 +242,11 @@ export const schema = buildSchema(`
     agregarFotoMenuItem(menuItemId: ID!, key: String!, principal: Boolean): FotoMenuItem!
     marcarFotoPrincipal(id: ID!): FotoMenuItem!
     eliminarFotoMenuItem(id: ID!): Boolean!
+    crearCuenta(nombre: String!, tipo: TipoCuenta!): Cuenta!
+    actualizarCuenta(id: ID!, nombre: String, activa: Boolean, qrKey: String): Cuenta!
+    abrirDia(aperturas: [AperturaCuentaInput!]!, nota: String): CierreDia!
+    cerrarDia(cierreDiaId: ID!, cierres: [CierreCuentaInput!]!, nota: String): CierreDia!
+    eliminarCierreDia(id: ID!): Boolean!
     crearRider(nombre: String!, telefono: String): Rider!
     actualizarRider(id: ID!, nombre: String, telefono: String, activo: Boolean): Rider!
     eliminarRider(id: ID!): Boolean!

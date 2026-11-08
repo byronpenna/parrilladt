@@ -34,6 +34,12 @@ interface PedidoRow {
 
 const RADIO_TIERRA_KM = 6371;
 
+// El negocio opera en El Salvador (config_negocio apunta a San Salvador).
+// "Hoy" para efectos de caja se define en esta zona, no en UTC: la RDS
+// corre en UTC y el negocio abre de noche, así que CURRENT_DATE a secas
+// adelantaría la fecha casi todas las horas de operación.
+const NEGOCIO_TZ = 'America/El_Salvador';
+
 // Distancia en línea recta (no la de ruta real), suficiente para un
 // estimado de "más o menos cuántos kilómetros son".
 function distanciaHaversineKm(lat1: number, lng1: number, lat2: number, lng2: number): number {
@@ -212,6 +218,110 @@ function shapeMovimientoInsumo(r: {
   };
 }
 
+function shapeCuenta(r: {
+  id: string;
+  nombre: string;
+  tipo: string;
+  activa: boolean;
+  saldo_actual: string | number;
+  qr_key?: string | null;
+}) {
+  return {
+    id: r.id,
+    nombre: r.nombre,
+    tipo: r.tipo,
+    activa: r.activa,
+    saldoActual: Number(r.saldo_actual),
+    qrUrl: r.qr_key ? fotoUrl(r.qr_key) : null,
+  };
+}
+
+interface CierreDiaRow {
+  id: string;
+  fecha: Date;
+  estado: string;
+  abierto_en: Date;
+  cerrado_en: Date | null;
+  nota_apertura: string | null;
+  nota_cierre: string | null;
+  ventas_efectivo: string | null;
+  ventas_transferencia: string | null;
+  ventas_total: string | null;
+  detalles: {
+    id: string;
+    cuentaId: string;
+    cuentaNombre: string;
+    cuentaTipo: string;
+    montoApertura: string | number;
+    montoCierreReal: string | number | null;
+  }[];
+}
+
+function shapeCierreDia(row: CierreDiaRow) {
+  const detalles = (row.detalles || []).map((d) => ({
+    id: d.id,
+    cuentaId: d.cuentaId,
+    cuentaNombre: d.cuentaNombre,
+    cuentaTipo: d.cuentaTipo,
+    montoApertura: Number(d.montoApertura),
+    montoCierreReal: d.montoCierreReal !== null ? Number(d.montoCierreReal) : null,
+  }));
+
+  let diferenciaEfectivo: number | null = null;
+  let diferenciaBanco: number | null = null;
+  if (row.estado === 'cerrado') {
+    const sumPor = (tipo: string, campo: 'montoApertura' | 'montoCierreReal') =>
+      detalles.filter((d) => d.cuentaTipo === tipo).reduce((s, d) => s + (d[campo] ?? 0), 0);
+    diferenciaEfectivo = sumPor('efectivo', 'montoCierreReal') - sumPor('efectivo', 'montoApertura') - Number(row.ventas_efectivo || 0);
+    diferenciaBanco = sumPor('banco', 'montoCierreReal') - sumPor('banco', 'montoApertura') - Number(row.ventas_transferencia || 0);
+  }
+
+  return {
+    id: row.id,
+    fecha: new Date(row.fecha).toISOString().slice(0, 10),
+    estado: row.estado,
+    abiertoEn: new Date(row.abierto_en).toISOString(),
+    cerradoEn: row.cerrado_en ? new Date(row.cerrado_en).toISOString() : null,
+    notaApertura: row.nota_apertura,
+    notaCierre: row.nota_cierre,
+    ventasEfectivo: row.ventas_efectivo !== null ? Number(row.ventas_efectivo) : null,
+    ventasTransferencia: row.ventas_transferencia !== null ? Number(row.ventas_transferencia) : null,
+    ventasTotal: row.ventas_total !== null ? Number(row.ventas_total) : null,
+    detalles,
+    diferenciaEfectivo,
+    diferenciaBanco,
+  };
+}
+
+const CIERRE_DIA_SELECT = `
+  SELECT cd.id, cd.fecha, cd.estado, cd.abierto_en, cd.cerrado_en, cd.nota_apertura, cd.nota_cierre,
+    cd.ventas_efectivo, cd.ventas_transferencia, cd.ventas_total,
+    COALESCE(
+      json_agg(
+        json_build_object(
+          'id', d.id,
+          'cuentaId', d.cuenta_id,
+          'cuentaNombre', c.nombre,
+          'cuentaTipo', c.tipo,
+          'montoApertura', d.monto_apertura,
+          'montoCierreReal', d.monto_cierre_real
+        ) ORDER BY c.tipo, c.nombre
+      ) FILTER (WHERE d.id IS NOT NULL),
+      '[]'
+    ) AS detalles
+  FROM cierres_dia cd
+  LEFT JOIN cierre_cuenta_detalle d ON d.cierre_dia_id = cd.id
+  LEFT JOIN cuentas c ON c.id = d.cuenta_id
+`;
+
+const CIERRE_DIA_GROUP_BY = 'GROUP BY cd.id';
+
+async function fetchCierreDia(pool: Pool, id: string) {
+  const res = await pool.query(`${CIERRE_DIA_SELECT} WHERE cd.id = $1 ${CIERRE_DIA_GROUP_BY}`, [id]);
+  if (res.rowCount === 0) throw new Error(`Cierre de día ${id} no encontrado`);
+  return shapeCierreDia(res.rows[0]);
+}
+
 const MENU_ITEM_SELECT = `
   SELECT m.id, m.nombre, m.categoria, m.precio, m.activo,
     (SELECT f.foto_key FROM menu_item_fotos f WHERE f.menu_item_id = m.id AND f.principal LIMIT 1) AS foto_principal_key
@@ -277,6 +387,46 @@ export const rootValue = {
       [insumoId]
     );
     return res.rows.map(shapeMovimientoInsumo);
+  },
+
+  cuentas: async () => {
+    const pool = await getPool();
+    const res = await pool.query(`
+      SELECT c.id, c.nombre, c.tipo, c.activa, c.qr_key,
+        COALESCE(
+          (SELECT d.monto_cierre_real FROM cierre_cuenta_detalle d
+           JOIN cierres_dia cd ON cd.id = d.cierre_dia_id
+           WHERE d.cuenta_id = c.id AND d.monto_cierre_real IS NOT NULL
+           ORDER BY cd.fecha DESC LIMIT 1),
+          (SELECT d.monto_apertura FROM cierre_cuenta_detalle d
+           JOIN cierres_dia cd ON cd.id = d.cierre_dia_id
+           WHERE d.cuenta_id = c.id
+           ORDER BY cd.fecha DESC LIMIT 1),
+          0
+        ) AS saldo_actual
+      FROM cuentas c
+      ORDER BY c.tipo, c.nombre
+    `);
+    return res.rows.map(shapeCuenta);
+  },
+
+  cierresDia: async ({ limite }: { limite?: number }) => {
+    const pool = await getPool();
+    const res = await pool.query(
+      `${CIERRE_DIA_SELECT} ${CIERRE_DIA_GROUP_BY} ORDER BY cd.fecha DESC LIMIT $1`,
+      [limite ?? 30]
+    );
+    return res.rows.map(shapeCierreDia);
+  },
+
+  cierreDiaActual: async () => {
+    const pool = await getPool();
+    const res = await pool.query(
+      `${CIERRE_DIA_SELECT} WHERE cd.fecha = (now() AT TIME ZONE $1)::date ${CIERRE_DIA_GROUP_BY}`,
+      [NEGOCIO_TZ]
+    );
+    if (res.rowCount === 0) return null;
+    return shapeCierreDia(res.rows[0]);
   },
 
   configNegocio: async () => {
@@ -866,5 +1016,180 @@ export const rootValue = {
     );
     const row = res.rows[0];
     return { latitud: Number(row.latitud), longitud: Number(row.longitud), direccion: row.direccion };
+  },
+
+  crearCuenta: async ({ nombre, tipo }: { nombre: string; tipo: string }) => {
+    const pool = await getPool();
+    try {
+      const res = await pool.query(
+        `INSERT INTO cuentas (nombre, tipo) VALUES ($1, $2) RETURNING id, nombre, tipo, activa, qr_key`,
+        [nombre.trim(), tipo]
+      );
+      return shapeCuenta({ ...res.rows[0], saldo_actual: 0 });
+    } catch (err: unknown) {
+      if (err && typeof err === 'object' && 'code' in err && (err as { code: string }).code === '23505') {
+        throw new Error(`Ya existe una cuenta llamada "${nombre.trim()}"`);
+      }
+      throw err;
+    }
+  },
+
+  actualizarCuenta: async (args: { id: string; nombre?: string; activa?: boolean; qrKey?: string | null }) => {
+    const pool = await getPool();
+    const sets: string[] = [];
+    const values: unknown[] = [];
+    let i = 2;
+    if (args.nombre) {
+      sets.push(`nombre = $${i++}`);
+      values.push(args.nombre.trim());
+    }
+    if (Object.prototype.hasOwnProperty.call(args, 'activa')) {
+      sets.push(`activa = $${i++}`);
+      values.push(args.activa);
+    }
+    // hasOwnProperty: qrKey:null es "quitar el QR", distinto de no mandarlo (no tocar)
+    if (Object.prototype.hasOwnProperty.call(args, 'qrKey')) {
+      sets.push(`qr_key = $${i++}`);
+      values.push(args.qrKey ?? null);
+    }
+    if (sets.length === 0) throw new Error('No hay nada que actualizar');
+    const res = await pool.query(
+      `UPDATE cuentas SET ${sets.join(', ')} WHERE id = $1 RETURNING id, nombre, tipo, activa, qr_key`,
+      [args.id, ...values]
+    );
+    if (res.rowCount === 0) throw new Error(`Cuenta ${args.id} no encontrada`);
+    const id = args.id;
+    const saldoRes = await pool.query(
+      `SELECT COALESCE(
+         (SELECT d.monto_cierre_real FROM cierre_cuenta_detalle d
+          JOIN cierres_dia cd ON cd.id = d.cierre_dia_id
+          WHERE d.cuenta_id = $1 AND d.monto_cierre_real IS NOT NULL
+          ORDER BY cd.fecha DESC LIMIT 1),
+         (SELECT d.monto_apertura FROM cierre_cuenta_detalle d
+          JOIN cierres_dia cd ON cd.id = d.cierre_dia_id
+          WHERE d.cuenta_id = $1
+          ORDER BY cd.fecha DESC LIMIT 1),
+         0
+       ) AS saldo_actual`,
+      [id]
+    );
+    return shapeCuenta({ ...res.rows[0], saldo_actual: saldoRes.rows[0].saldo_actual });
+  },
+
+  abrirDia: async ({
+    aperturas,
+    nota,
+  }: {
+    aperturas: { cuentaId: string; montoApertura: number }[];
+    nota?: string;
+  }) => {
+    if (aperturas.length === 0) throw new Error('Indica el monto de apertura de al menos una cuenta');
+    const pool = await getPool();
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+      const existente = await client.query(
+        `SELECT id FROM cierres_dia WHERE fecha = (now() AT TIME ZONE $1)::date`,
+        [NEGOCIO_TZ]
+      );
+      if (existente.rowCount && existente.rowCount > 0) {
+        throw new Error('Ya existe un cierre de caja para hoy');
+      }
+      const cierreRes = await client.query(
+        `INSERT INTO cierres_dia (fecha, nota_apertura) VALUES ((now() AT TIME ZONE $2)::date, $1) RETURNING id`,
+        [nota || null, NEGOCIO_TZ]
+      );
+      const cierreDiaId = cierreRes.rows[0].id;
+      for (const a of aperturas) {
+        await client.query(
+          `INSERT INTO cierre_cuenta_detalle (cierre_dia_id, cuenta_id, monto_apertura) VALUES ($1, $2, $3)`,
+          [cierreDiaId, a.cuentaId, a.montoApertura]
+        );
+      }
+      await client.query('COMMIT');
+      return fetchCierreDia(pool, cierreDiaId);
+    } catch (err) {
+      await client.query('ROLLBACK');
+      throw err;
+    } finally {
+      client.release();
+    }
+  },
+
+  cerrarDia: async ({
+    cierreDiaId,
+    cierres,
+    nota,
+  }: {
+    cierreDiaId: string;
+    cierres: { cuentaId: string; montoCierreReal: number }[];
+    nota?: string;
+  }) => {
+    if (cierres.length === 0) throw new Error('Indica el monto real de al menos una cuenta');
+    const pool = await getPool();
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+      const cierreRes = await client.query(
+        'SELECT estado, abierto_en FROM cierres_dia WHERE id = $1 FOR UPDATE',
+        [cierreDiaId]
+      );
+      if (cierreRes.rowCount === 0) throw new Error('Cierre de día no encontrado');
+      if (cierreRes.rows[0].estado === 'cerrado') throw new Error('Este día ya está cerrado');
+      const abiertoEn = cierreRes.rows[0].abierto_en;
+
+      const ventasRes = await client.query(
+        `SELECT
+           COALESCE(SUM(total) FILTER (WHERE metodo_pago = 'efectivo'), 0) AS ventas_efectivo,
+           COALESCE(SUM(total) FILTER (WHERE metodo_pago = 'transferencia'), 0) AS ventas_transferencia,
+           COALESCE(SUM(total), 0) AS ventas_total
+         FROM pedidos
+         WHERE created_at >= $1 AND created_at <= now() AND pagado = true AND estado <> 'cancelado'`,
+        [abiertoEn]
+      );
+      const { ventas_efectivo, ventas_transferencia, ventas_total } = ventasRes.rows[0];
+
+      for (const c of cierres) {
+        const upd = await client.query(
+          `UPDATE cierre_cuenta_detalle SET monto_cierre_real = $1 WHERE cierre_dia_id = $2 AND cuenta_id = $3 RETURNING id`,
+          [c.montoCierreReal, cierreDiaId, c.cuentaId]
+        );
+        if (upd.rowCount === 0) {
+          // cuenta creada después de abrir el día: no tiene fila de apertura todavía
+          await client.query(
+            `INSERT INTO cierre_cuenta_detalle (cierre_dia_id, cuenta_id, monto_apertura, monto_cierre_real)
+             VALUES ($1, $2, 0, $3)`,
+            [cierreDiaId, c.cuentaId, c.montoCierreReal]
+          );
+        }
+      }
+
+      await client.query(
+        `UPDATE cierres_dia SET
+           estado = 'cerrado',
+           cerrado_en = now(),
+           nota_cierre = $1,
+           ventas_efectivo = $2,
+           ventas_transferencia = $3,
+           ventas_total = $4
+         WHERE id = $5`,
+        [nota || null, ventas_efectivo, ventas_transferencia, ventas_total, cierreDiaId]
+      );
+      await client.query('COMMIT');
+      return fetchCierreDia(pool, cierreDiaId);
+    } catch (err) {
+      await client.query('ROLLBACK');
+      throw err;
+    } finally {
+      client.release();
+    }
+  },
+
+  // solo permite borrar un día que todavía está abierto (apertura hecha por
+  // error); una vez cerrado queda fijo, como cualquier registro de auditoría
+  eliminarCierreDia: async ({ id }: { id: string }) => {
+    const pool = await getPool();
+    const res = await pool.query(`DELETE FROM cierres_dia WHERE id = $1 AND estado = 'abierto'`, [id]);
+    return (res.rowCount ?? 0) > 0;
   },
 };

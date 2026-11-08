@@ -100,3 +100,40 @@ export interface MovimientoInsumo {
   nota: string | null;
   createdAt: string;
 }
+
+export type TipoCuenta = 'efectivo' | 'banco';
+export type EstadoCierreDia = 'abierto' | 'cerrado';
+
+export interface Cuenta {
+  id: string;
+  nombre: string;
+  tipo: TipoCuenta;
+  activa: boolean;
+  saldoActual: number;
+  qrUrl: string | null;
+}
+
+export interface CierreCuentaDetalle {
+  id: string;
+  cuentaId: string;
+  cuentaNombre: string;
+  cuentaTipo: TipoCuenta;
+  montoApertura: number;
+  montoCierreReal: number | null;
+}
+
+export interface CierreDia {
+  id: string;
+  fecha: string;
+  estado: EstadoCierreDia;
+  abiertoEn: string;
+  cerradoEn: string | null;
+  notaApertura: string | null;
+  notaCierre: string | null;
+  ventasEfectivo: number | null;
+  ventasTransferencia: number | null;
+  ventasTotal: number | null;
+  detalles: CierreCuentaDetalle[];
+  diferenciaEfectivo: number | null;
+  diferenciaBanco: number | null;
+}
