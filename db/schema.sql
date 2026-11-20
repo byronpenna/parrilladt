@@ -249,13 +249,19 @@ ALTER TABLE pedidos ADD COLUMN IF NOT EXISTS pagado BOOLEAN NOT NULL DEFAULT tru
 
 -- modo de ruleta configurado a mano por un admin en /pedidos: decide si el
 -- premio de /feedback se juega con la encuesta general de todo el pedido,
--- con la encuesta de cada plato (QR individual por plato), o ninguna de
--- las dos. No se expone al cliente antes de que conteste la encuesta, para
--- no adelantarle el resultado.
+-- con la encuesta de cada plato (QR individual por plato), al azar (25% de
+-- probabilidad en cada encuesta, general o por plato), o ninguna de las
+-- anteriores. No se expone al cliente antes de que conteste la encuesta,
+-- para no adelantarle el resultado.
 DO $$ BEGIN
     CREATE TYPE modo_ruleta_pedido AS ENUM ('ninguno', 'pedido', 'item');
 EXCEPTION WHEN duplicate_object THEN NULL;
 END $$;
+
+-- modo_ruleta_pedido ya existía sin este valor en instalaciones previas; no
+-- se puede usar en la misma transacción en que se agrega, pero aquí solo se
+-- declara, no se usa en ningún INSERT/UPDATE de este archivo
+ALTER TYPE modo_ruleta_pedido ADD VALUE IF NOT EXISTS 'azar';
 
 -- reemplaza a ruleta_habilitado (booleano): instalaciones previas a este
 -- cambio tenían esa columna, pero nunca llegó a usarse en producción

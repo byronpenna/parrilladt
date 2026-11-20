@@ -80,6 +80,18 @@ function esIdNumerico(id: unknown): id is string {
   return typeof id === 'string' && /^\d+$/.test(id);
 }
 
+// probabilidad de ganar cuando el admin eligió el modo "azar" en /pedidos
+const PROBABILIDAD_RULETA_AZAR = 0.25;
+
+// 'pedido'/'item' habilitan de forma determinista esa encuesta puntual
+// (general o por plato, según corresponda); 'azar' aplica la misma
+// probabilidad tanto a la encuesta general como a cada encuesta por plato
+function resuelveHabilitado(modo: string, modoDeterminista: 'pedido' | 'item'): boolean {
+  if (modo === modoDeterminista) return true;
+  if (modo === 'azar') return Math.random() < PROBABILIDAD_RULETA_AZAR;
+  return false;
+}
+
 function shapeEncuestaSatisfaccion(r: {
   id: string;
   pedido_id: string | null;
@@ -1558,13 +1570,13 @@ export const rootValue = {
       pedidoIdValido = pedidoId;
       pedidoItemIdValido = pedidoItemId;
       itemNombreSnapshot = itemRes.rows[0].item_nombre;
-      habilitado = itemRes.rows[0].ruleta_modo === 'item';
+      habilitado = resuelveHabilitado(itemRes.rows[0].ruleta_modo, 'item');
     } else if (pedidoId) {
       if (!esIdNumerico(pedidoId)) throw new Error('Pedido no encontrado');
       const pedidoRes = await pool.query('SELECT ruleta_modo FROM pedidos WHERE id = $1', [pedidoId]);
       if (pedidoRes.rowCount === 0) throw new Error('Pedido no encontrado');
       pedidoIdValido = pedidoId;
-      habilitado = pedidoRes.rows[0].ruleta_modo === 'pedido';
+      habilitado = resuelveHabilitado(pedidoRes.rows[0].ruleta_modo, 'pedido');
     } else {
       if (!clienteNombre?.trim() || !clienteTelefono?.trim()) {
         throw new Error('Indica tu nombre y tu teléfono para dejar tu opinión');

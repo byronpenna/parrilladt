@@ -1,6 +1,6 @@
 export type EstadoPedido = 'pendiente' | 'en_preparacion' | 'listo' | 'entregado' | 'cancelado';
 export type MetodoPago = 'efectivo' | 'transferencia';
-export type ModoRuletaPedido = 'ninguno' | 'pedido' | 'item';
+export type ModoRuletaPedido = 'ninguno' | 'pedido' | 'item' | 'azar';
 
 export interface MenuItem {
   id: string;

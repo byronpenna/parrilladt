@@ -28,6 +28,7 @@ export const schema = buildSchema(`
     ninguno
     pedido
     item
+    azar
   }
 
   type PremioRuleta {

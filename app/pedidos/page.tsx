@@ -31,6 +31,7 @@ const RULETA_MODO_LABEL: Record<ModoRuletaPedido, string> = {
   ninguno: 'Ninguno',
   pedido: 'Pedido completo',
   item: 'Por plato',
+  azar: 'Al azar (25%)',
 };
 
 const ORDEN_OPCIONES = [
@@ -439,7 +440,7 @@ export default function PedidosPage() {
                           </td>
                           <td rowSpan={filas}>
                             <select
-                              title="Decide si el premio de la ruleta en /feedback se juega con la encuesta general del pedido o con la de cada plato (QR por plato)"
+                              title="Decide cómo puede ganarse el premio de la ruleta en /feedback: con la encuesta general del pedido, con la de cada plato (QR por plato), o al azar (25% de probabilidad en cada encuesta)"
                               value={p.ruletaModo}
                               onChange={(e) => cambiarRuletaModo(p, e.target.value as ModoRuletaPedido)}
                             >
