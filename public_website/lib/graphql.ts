@@ -121,3 +121,58 @@ export async function crearPedidoPublico(input: CrearPedidoInput): Promise<Pedid
   );
   return data.crearPedido;
 }
+
+// ── Encuesta de satisfacción + ruleta de premios (/feedback) ───────────
+// La elegibilidad real para el premio la decide el back-office (un admin
+// marca el pedido en /pedidos) y el resolver de la Lambda; esta app nunca
+// ve ni envía esa bandera, solo recibe el resultado ya decidido.
+
+export type EstadoFeedbackPedido = {
+  existe: boolean;
+  yaRespondido: boolean;
+  itemNombre: string | null;
+};
+
+export async function obtenerEstadoFeedbackPedido(
+  pedidoId: string,
+  pedidoItemId?: string | null
+): Promise<EstadoFeedbackPedido> {
+  const data = await invocarGraphQL<{ estadoFeedbackPedido: EstadoFeedbackPedido }>(
+    `
+    query Estado($pedidoId: ID!, $pedidoItemId: ID) {
+      estadoFeedbackPedido(pedidoId: $pedidoId, pedidoItemId: $pedidoItemId) { existe yaRespondido itemNombre }
+    }
+  `,
+    { pedidoId, pedidoItemId: pedidoItemId || null }
+  );
+  return data.estadoFeedbackPedido;
+}
+
+export type FeedbackInput = {
+  pedidoId?: string | null;
+  pedidoItemId?: string | null;
+  clienteNombre?: string;
+  clienteTelefono?: string;
+  calificacionComida: number;
+  calificacionAtencion: number;
+  calificacionRecomendacion: number;
+  comentario?: string;
+};
+
+export type ResultadoFeedback = {
+  ganoPremio: boolean;
+  premioNombre: string | null;
+  premioCodigo: string | null;
+};
+
+export async function enviarFeedbackPublico(input: FeedbackInput): Promise<ResultadoFeedback> {
+  const data = await invocarGraphQL<{ enviarFeedback: ResultadoFeedback }>(
+    `
+    mutation Enviar($input: FeedbackInput!) {
+      enviarFeedback(input: $input) { ganoPremio premioNombre premioCodigo }
+    }
+  `,
+    { input }
+  );
+  return data.enviarFeedback;
+}
