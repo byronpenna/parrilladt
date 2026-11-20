@@ -370,13 +370,18 @@ ALTER TABLE encuestas_satisfaccion ADD COLUMN IF NOT EXISTS premio_id BIGINT REF
 
 -- se reemplaza por dos índices que distinguen encuesta general vs. por plato
 DROP INDEX IF EXISTS encuestas_satisfaccion_pedido_unique;
+-- un pedido_item_id ahora puede tener varias encuestas (una por plato físico,
+-- hasta su cantidad): ya no es unique, lo valida el resolver en vez de la base
+DROP INDEX IF EXISTS encuestas_satisfaccion_item_unique;
 
 -- encuesta general del pedido (sin plato puntual): una por pedido
 CREATE UNIQUE INDEX IF NOT EXISTS encuestas_satisfaccion_pedido_unique
     ON encuestas_satisfaccion (pedido_id) WHERE pedido_id IS NOT NULL AND pedido_item_id IS NULL;
--- encuesta de un plato puntual: una por plato (pedido_item_id ya identifica el pedido por su FK)
-CREATE UNIQUE INDEX IF NOT EXISTS encuestas_satisfaccion_item_unique
-    ON encuestas_satisfaccion (pedido_item_id) WHERE pedido_item_id IS NOT NULL;
+-- encuesta de un plato puntual: un pedido_item_id es una sola fila aunque
+-- represente varios platos físicos iguales (ej. "2x Carne asada"), así que
+-- aquí NO va unique — el resolver de enviarFeedback permite hasta
+-- pedido_items.cantidad encuestas para el mismo pedido_item_id, una por
+-- plato físico, y rechaza la que se pase de esa cantidad.
 CREATE UNIQUE INDEX IF NOT EXISTS encuestas_satisfaccion_premio_codigo_unique
     ON encuestas_satisfaccion (premio_codigo) WHERE premio_codigo IS NOT NULL;
 CREATE INDEX IF NOT EXISTS encuestas_satisfaccion_created_at_idx ON encuestas_satisfaccion (created_at);

@@ -77,6 +77,12 @@ export const QUERY_FEEDBACK_PEDIDO = `
   }
 `;
 
+export const MUTATION_ELIMINAR_ENCUESTA_SATISFACCION = `
+  mutation EliminarEncuestaSatisfaccion($id: ID!) {
+    eliminarEncuestaSatisfaccion(id: $id)
+  }
+`;
+
 export const QUERY_PREMIOS_RULETA = `
   query { premiosRuleta { id nombre activo } }
 `;

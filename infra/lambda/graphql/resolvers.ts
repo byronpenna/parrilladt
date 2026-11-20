@@ -1442,17 +1442,19 @@ export const rootValue = {
 
     if (pedidoItemId) {
       if (!esIdNumerico(pedidoItemId)) return { existe: false, yaRespondido: false, itemNombre: null };
-      const itemRes = await pool.query('SELECT item_nombre FROM pedido_items WHERE id = $1 AND pedido_id = $2', [
-        pedidoItemId,
-        pedidoId,
-      ]);
+      const itemRes = await pool.query(
+        'SELECT item_nombre, cantidad FROM pedido_items WHERE id = $1 AND pedido_id = $2',
+        [pedidoItemId, pedidoId]
+      );
       if (itemRes.rowCount === 0) return { existe: false, yaRespondido: false, itemNombre: null };
-      const encuestaRes = await pool.query('SELECT 1 FROM encuestas_satisfaccion WHERE pedido_item_id = $1', [
-        pedidoItemId,
-      ]);
+      // un pedido_item admite hasta "cantidad" encuestas (una por plato físico)
+      const encuestaRes = await pool.query(
+        'SELECT COUNT(*)::int AS total FROM encuestas_satisfaccion WHERE pedido_item_id = $1',
+        [pedidoItemId]
+      );
       return {
         existe: true,
-        yaRespondido: (encuestaRes.rowCount ?? 0) > 0,
+        yaRespondido: encuestaRes.rows[0].total >= itemRes.rows[0].cantidad,
         itemNombre: itemRes.rows[0].item_nombre,
       };
     }
@@ -1537,12 +1539,22 @@ export const rootValue = {
         throw new Error('Pedido o plato no encontrado');
       }
       const itemRes = await pool.query(
-        `SELECT pi.item_nombre, p.ruleta_modo
+        `SELECT pi.item_nombre, pi.cantidad, p.ruleta_modo
          FROM pedido_items pi JOIN pedidos p ON p.id = pi.pedido_id
          WHERE pi.id = $1 AND pi.pedido_id = $2`,
         [pedidoItemId, pedidoId]
       );
       if (itemRes.rowCount === 0) throw new Error('Pedido o plato no encontrado');
+      // un pedido_item representa "cantidad" platos físicos (ej. "2x Carne
+      // asada" es una sola fila): cada plato puede dejar su propia opinión,
+      // hasta agotar esa cantidad
+      const conteoRes = await pool.query(
+        'SELECT COUNT(*)::int AS total FROM encuestas_satisfaccion WHERE pedido_item_id = $1',
+        [pedidoItemId]
+      );
+      if (conteoRes.rows[0].total >= itemRes.rows[0].cantidad) {
+        throw new Error('Ya se enviaron todas las opiniones posibles para este plato');
+      }
       pedidoIdValido = pedidoId;
       pedidoItemIdValido = pedidoItemId;
       itemNombreSnapshot = itemRes.rows[0].item_nombre;
@@ -1606,11 +1618,8 @@ export const rootValue = {
           err && typeof err === 'object' && 'constraint' in err
             ? (err as { constraint?: string }).constraint
             : null;
-        if (
-          code === '23505' &&
-          (constraint === 'encuestas_satisfaccion_pedido_unique' || constraint === 'encuestas_satisfaccion_item_unique')
-        ) {
-          throw new Error('Ya enviaste tu opinión para esto');
+        if (code === '23505' && constraint === 'encuestas_satisfaccion_pedido_unique') {
+          throw new Error('Ya enviaste tu opinión para este pedido');
         }
         // choque de premio_codigo: reintentar con un código nuevo si quedan intentos
         if (code === '23505' && constraint === 'encuestas_satisfaccion_premio_codigo_unique' && intentos > 0) {
@@ -1622,9 +1631,12 @@ export const rootValue = {
     throw new Error('No se pudo generar un código de premio, intenta de nuevo');
   },
 
-  // borra una encuesta (ej. spam o una prueba) para liberar de nuevo el
-  // pedido asociado, si tenía uno, para una futura encuesta real
-  eliminarEncuestaSatisfaccion: async ({ id }: { id: string }) => {
+  // borra una encuesta (ej. spam, abuso o una prueba) para liberar de nuevo
+  // el pedido o plato asociado, si tenía uno, para una futura encuesta real.
+  // Acción sensible (destruye la opinión y el premio ganado de un cliente
+  // real): reservada a superadmin, igual que eliminarCierreDia.
+  eliminarEncuestaSatisfaccion: async ({ id }: { id: string }, context?: ResolverContext) => {
+    requireSuperadmin(context);
     const pool = await getPool();
     const res = await pool.query('DELETE FROM encuestas_satisfaccion WHERE id = $1', [id]);
     return (res.rowCount ?? 0) > 0;

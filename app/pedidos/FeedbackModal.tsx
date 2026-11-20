@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { gqlRequest } from '@/lib/graphql-client';
-import { QUERY_FEEDBACK_PEDIDO } from '@/lib/queries';
+import { QUERY_FEEDBACK_PEDIDO, MUTATION_ELIMINAR_ENCUESTA_SATISFACCION } from '@/lib/queries';
 import type { EncuestaSatisfaccion, FeedbackPedido, Pedido } from '@/lib/types';
 import { formatoNegocio } from '@/lib/timezone';
 
@@ -10,7 +10,17 @@ function estrellas(valor: number) {
   return '★'.repeat(valor) + '☆'.repeat(5 - valor);
 }
 
-function DetalleEncuesta({ encuesta, tituloComida }: { encuesta: EncuestaSatisfaccion; tituloComida: string }) {
+function DetalleEncuesta({
+  encuesta,
+  tituloComida,
+  puedeEliminar,
+  onEliminar,
+}: {
+  encuesta: EncuestaSatisfaccion;
+  tituloComida: string;
+  puedeEliminar: boolean;
+  onEliminar: (encuesta: EncuestaSatisfaccion) => void;
+}) {
   return (
     <>
       <div className="filtro-campo">
@@ -46,6 +56,11 @@ function DetalleEncuesta({ encuesta, tituloComida }: { encuesta: EncuestaSatisfa
           <span>No le tocó premio en esta vuelta.</span>
         )}
       </div>
+      {puedeEliminar && (
+        <button className="btn btn-naranja" onClick={() => onEliminar(encuesta)}>
+          🗑️ Eliminar este feedback
+        </button>
+      )}
     </>
   );
 }
@@ -53,22 +68,48 @@ function DetalleEncuesta({ encuesta, tituloComida }: { encuesta: EncuestaSatisfa
 export default function FeedbackModal({ pedido, onClose }: { pedido: Pedido; onClose: () => void }) {
   const [feedback, setFeedback] = useState<FeedbackPedido | null | undefined>(undefined);
   const [error, setError] = useState('');
+  const [esSuperadmin, setEsSuperadmin] = useState(false);
 
   useEffect(() => {
-    (async () => {
-      setError('');
-      setFeedback(undefined);
-      try {
-        const data = await gqlRequest<{ feedbackPedido: FeedbackPedido }>(QUERY_FEEDBACK_PEDIDO, {
-          pedidoId: pedido.id,
-        });
-        setFeedback(data.feedbackPedido);
-      } catch {
-        setError('No se pudo cargar el feedback de este pedido');
-        setFeedback(null);
-      }
-    })();
+    cargarFeedback();
+    fetch('/api/auth/me')
+      .then((r) => r.json())
+      .then((d) => setEsSuperadmin(!!d.esSuperadmin))
+      .catch(() => {});
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pedido.id]);
+
+  async function cargarFeedback() {
+    setError('');
+    setFeedback(undefined);
+    try {
+      const data = await gqlRequest<{ feedbackPedido: FeedbackPedido }>(QUERY_FEEDBACK_PEDIDO, {
+        pedidoId: pedido.id,
+      });
+      setFeedback(data.feedbackPedido);
+    } catch {
+      setError('No se pudo cargar el feedback de este pedido');
+      setFeedback(null);
+    }
+  }
+
+  async function eliminarEncuesta(encuesta: EncuestaSatisfaccion) {
+    if (!window.confirm('¿Eliminar este feedback definitivamente? Esto no se puede deshacer.')) return;
+    setError('');
+    try {
+      await gqlRequest(MUTATION_ELIMINAR_ENCUESTA_SATISFACCION, { id: encuesta.id });
+      setFeedback((prev) =>
+        prev
+          ? {
+              general: prev.general?.id === encuesta.id ? null : prev.general,
+              porItem: prev.porItem.filter((f) => f.id !== encuesta.id),
+            }
+          : prev
+      );
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'No se pudo eliminar el feedback');
+    }
+  }
 
   const sinNada = feedback && !feedback.general && feedback.porItem.length === 0;
 
@@ -91,7 +132,12 @@ export default function FeedbackModal({ pedido, onClose }: { pedido: Pedido; onC
           {feedback?.general && (
             <>
               <strong>Encuesta general del pedido</strong>
-              <DetalleEncuesta encuesta={feedback.general} tituloComida="¿Cómo estuvo la comida?" />
+              <DetalleEncuesta
+                encuesta={feedback.general}
+                tituloComida="¿Cómo estuvo la comida?"
+                puedeEliminar={esSuperadmin}
+                onEliminar={eliminarEncuesta}
+              />
             </>
           )}
 
@@ -103,6 +149,8 @@ export default function FeedbackModal({ pedido, onClose }: { pedido: Pedido; onC
                   <DetalleEncuesta
                     encuesta={encuesta}
                     tituloComida={`¿Cómo estuvo ${encuesta.itemNombre ?? 'este plato'}?`}
+                    puedeEliminar={esSuperadmin}
+                    onEliminar={eliminarEncuesta}
                   />
                 </div>
               ))}
