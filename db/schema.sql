@@ -103,6 +103,43 @@ CREATE TABLE IF NOT EXISTS insumo_movimientos (
 CREATE INDEX IF NOT EXISTS insumo_movimientos_insumo_id_idx ON insumo_movimientos (insumo_id);
 CREATE INDEX IF NOT EXISTS insumo_movimientos_created_at_idx ON insumo_movimientos (created_at);
 
+-- ── Órdenes de compra ───────────────────────────────────────────────────
+-- Son solo el plan/registro de qué se pidió (no mueven stock): cuando la
+-- mercadería llega de verdad, el stock sube con el flujo normal de "Cargar"
+-- en insumo_movimientos, igual que cualquier otra compra.
+DO $$ BEGIN
+    CREATE TYPE estado_orden_compra AS ENUM ('pendiente', 'recibida', 'cancelada');
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
+CREATE TABLE IF NOT EXISTS ordenes_compra (
+    id            BIGSERIAL PRIMARY KEY,
+    estado        estado_orden_compra NOT NULL DEFAULT 'pendiente',
+    nota          TEXT,
+    total         NUMERIC(12,2) NOT NULL DEFAULT 0,
+    recibida_en   TIMESTAMPTZ,
+    created_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at    TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS ordenes_compra_estado_idx ON ordenes_compra (estado);
+CREATE INDEX IF NOT EXISTS ordenes_compra_created_at_idx ON ordenes_compra (created_at);
+
+CREATE TABLE IF NOT EXISTS orden_compra_items (
+    id                BIGSERIAL PRIMARY KEY,
+    orden_compra_id   BIGINT NOT NULL REFERENCES ordenes_compra(id) ON DELETE CASCADE,
+    insumo_id         BIGINT REFERENCES insumos(id) ON DELETE SET NULL,
+    insumo_nombre     TEXT NOT NULL,   -- copia del nombre: sobrevive aunque el insumo se renombre o se borre
+    unidad            TEXT NOT NULL,
+    cantidad          NUMERIC(12,2) NOT NULL CHECK (cantidad > 0),
+    precio_unitario   NUMERIC(12,2) NOT NULL DEFAULT 0 CHECK (precio_unitario >= 0),
+    subtotal          NUMERIC(12,2) GENERATED ALWAYS AS (cantidad * precio_unitario) STORED,
+    created_at        TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS orden_compra_items_orden_id_idx ON orden_compra_items (orden_compra_id);
+CREATE INDEX IF NOT EXISTS orden_compra_items_insumo_id_idx ON orden_compra_items (insumo_id);
+
 -- ── Caja: cuentas, apertura y cierre de día ─────────────────────────────
 -- Arqueo de caja estándar: cada cuenta (efectivo o banco) declara un monto
 -- de apertura al iniciar el día y un monto real contado al cerrarlo; las
@@ -210,6 +247,21 @@ ALTER TABLE pedidos ADD COLUMN IF NOT EXISTS motivo_cancelacion TEXT;
 -- editable desde cocina y pedidos cuando en realidad quedó debiendo
 ALTER TABLE pedidos ADD COLUMN IF NOT EXISTS pagado BOOLEAN NOT NULL DEFAULT true;
 
+-- modo de ruleta configurado a mano por un admin en /pedidos: decide si el
+-- premio de /feedback se juega con la encuesta general de todo el pedido,
+-- con la encuesta de cada plato (QR individual por plato), o ninguna de
+-- las dos. No se expone al cliente antes de que conteste la encuesta, para
+-- no adelantarle el resultado.
+DO $$ BEGIN
+    CREATE TYPE modo_ruleta_pedido AS ENUM ('ninguno', 'pedido', 'item');
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
+-- reemplaza a ruleta_habilitado (booleano): instalaciones previas a este
+-- cambio tenían esa columna, pero nunca llegó a usarse en producción
+ALTER TABLE pedidos DROP COLUMN IF EXISTS ruleta_habilitado;
+ALTER TABLE pedidos ADD COLUMN IF NOT EXISTS ruleta_modo modo_ruleta_pedido NOT NULL DEFAULT 'ninguno';
+
 CREATE INDEX IF NOT EXISTS pedidos_estado_idx ON pedidos (estado) WHERE estado <> 'entregado';
 CREATE INDEX IF NOT EXISTS pedidos_created_at_idx ON pedidos (created_at);
 CREATE INDEX IF NOT EXISTS pedidos_rider_id_idx ON pedidos (rider_id);
@@ -255,6 +307,81 @@ ALTER TABLE pedido_estado_historial ADD COLUMN IF NOT EXISTS motivo TEXT;
 
 CREATE INDEX IF NOT EXISTS pedido_estado_historial_pedido_id_idx ON pedido_estado_historial (pedido_id);
 
+-- ── Encuesta de satisfacción + ruleta de premios (sitio público) ───────
+-- reemplazada por premios_ruleta (catálogo de varios premios, administrable
+-- desde /configuracion): instalaciones previas a este cambio tenían esta
+-- tabla con un solo premio, pero nunca llegó a usarse en producción
+DROP TABLE IF EXISTS configuracion_ruleta;
+
+-- Catálogo de premios que puede repartir la ruleta de /feedback. "activo"
+-- permite sacar un premio de circulación sin borrar su historial (los
+-- premios ya entregados sobreviven como snapshot en encuestas_satisfaccion,
+-- ver abajo). Cuando una encuesta gana, se elige al azar un premio activo.
+CREATE TABLE IF NOT EXISTS premios_ruleta (
+    id          BIGSERIAL PRIMARY KEY,
+    nombre      TEXT NOT NULL,
+    activo      BOOLEAN NOT NULL DEFAULT true,
+    created_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at  TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS premios_ruleta_nombre_unique ON premios_ruleta (lower(trim(nombre)));
+CREATE INDEX IF NOT EXISTS premios_ruleta_activo_idx ON premios_ruleta (activo);
+
+-- seed de los premios actuales
+INSERT INTO premios_ruleta (nombre) VALUES
+    ('Chorizo extra'),
+    ('Sopa de gallina extra'),
+    ('Soda gratis por la compra de 4 platos'),
+    ('2 carnes por $8')
+ON CONFLICT (lower(trim(nombre))) DO NOTHING;
+
+-- Una fila por encuesta respondida en /feedback: general de un pedido
+-- (pedido_item_id NULL) o de un plato puntual (QR pegado en el plato,
+-- pedido_item_id apunta a la línea de ese plato en pedido_items). pedido_id
+-- es NULL cuando el cliente contesta sin pedido (se le pide nombre/teléfono
+-- en ese caso); con ON DELETE SET NULL el feedback sobrevive aunque el
+-- pedido o el plato se borren. Una encuesta general por pedido y una
+-- encuesta por plato, reforzado con los índices únicos de abajo.
+CREATE TABLE IF NOT EXISTS encuestas_satisfaccion (
+    id                        BIGSERIAL PRIMARY KEY,
+    pedido_id                 BIGINT REFERENCES pedidos(id) ON DELETE SET NULL,
+    pedido_item_id            BIGINT REFERENCES pedido_items(id) ON DELETE SET NULL,
+    item_nombre               TEXT,  -- snapshot del nombre del plato, solo cuando es encuesta por plato
+    cliente_nombre            TEXT,
+    cliente_telefono          TEXT,
+    calificacion_comida       SMALLINT NOT NULL CHECK (calificacion_comida BETWEEN 1 AND 5),
+    calificacion_atencion     SMALLINT NOT NULL CHECK (calificacion_atencion BETWEEN 1 AND 5),
+    calificacion_recomendacion SMALLINT NOT NULL CHECK (calificacion_recomendacion BETWEEN 1 AND 5),
+    comentario                TEXT,
+    -- snapshot del premio ganado (si ganó): sobrevive aunque el premio se borre o se renombre después
+    gano_premio               BOOLEAN NOT NULL DEFAULT false,
+    premio_id                 BIGINT REFERENCES premios_ruleta(id) ON DELETE SET NULL,
+    premio_nombre             TEXT,
+    premio_codigo             TEXT,
+    premio_usado              BOOLEAN NOT NULL DEFAULT false,
+    created_at                TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- encuestas_satisfaccion ya existía sin estas columnas en instalaciones previas
+ALTER TABLE encuestas_satisfaccion ADD COLUMN IF NOT EXISTS pedido_item_id BIGINT REFERENCES pedido_items(id) ON DELETE SET NULL;
+ALTER TABLE encuestas_satisfaccion ADD COLUMN IF NOT EXISTS item_nombre TEXT;
+ALTER TABLE encuestas_satisfaccion ADD COLUMN IF NOT EXISTS premio_id BIGINT REFERENCES premios_ruleta(id) ON DELETE SET NULL;
+
+-- se reemplaza por dos índices que distinguen encuesta general vs. por plato
+DROP INDEX IF EXISTS encuestas_satisfaccion_pedido_unique;
+
+-- encuesta general del pedido (sin plato puntual): una por pedido
+CREATE UNIQUE INDEX IF NOT EXISTS encuestas_satisfaccion_pedido_unique
+    ON encuestas_satisfaccion (pedido_id) WHERE pedido_id IS NOT NULL AND pedido_item_id IS NULL;
+-- encuesta de un plato puntual: una por plato (pedido_item_id ya identifica el pedido por su FK)
+CREATE UNIQUE INDEX IF NOT EXISTS encuestas_satisfaccion_item_unique
+    ON encuestas_satisfaccion (pedido_item_id) WHERE pedido_item_id IS NOT NULL;
+CREATE UNIQUE INDEX IF NOT EXISTS encuestas_satisfaccion_premio_codigo_unique
+    ON encuestas_satisfaccion (premio_codigo) WHERE premio_codigo IS NOT NULL;
+CREATE INDEX IF NOT EXISTS encuestas_satisfaccion_created_at_idx ON encuestas_satisfaccion (created_at);
+CREATE INDEX IF NOT EXISTS encuestas_satisfaccion_pedido_item_id_idx ON encuestas_satisfaccion (pedido_item_id);
+
 -- ── trigger para mantener updated_at y total al día ────────────────────
 CREATE OR REPLACE FUNCTION set_updated_at()
 RETURNS TRIGGER AS $$
@@ -284,6 +411,14 @@ CREATE OR REPLACE TRIGGER cierre_cuenta_detalle_set_updated_at
     BEFORE UPDATE ON cierre_cuenta_detalle
     FOR EACH ROW EXECUTE FUNCTION set_updated_at();
 
+CREATE OR REPLACE TRIGGER ordenes_compra_set_updated_at
+    BEFORE UPDATE ON ordenes_compra
+    FOR EACH ROW EXECUTE FUNCTION set_updated_at();
+
+CREATE OR REPLACE TRIGGER premios_ruleta_set_updated_at
+    BEFORE UPDATE ON premios_ruleta
+    FOR EACH ROW EXECUTE FUNCTION set_updated_at();
+
 CREATE OR REPLACE FUNCTION recalcular_total_pedido()
 RETURNS TRIGGER AS $$
 BEGIN
@@ -298,6 +433,23 @@ $$ LANGUAGE plpgsql;
 CREATE OR REPLACE TRIGGER pedido_items_recalcular_total
     AFTER INSERT OR UPDATE OR DELETE ON pedido_items
     FOR EACH ROW EXECUTE FUNCTION recalcular_total_pedido();
+
+CREATE OR REPLACE FUNCTION recalcular_total_orden_compra()
+RETURNS TRIGGER AS $$
+BEGIN
+    UPDATE ordenes_compra
+    SET total = COALESCE(
+        (SELECT SUM(subtotal) FROM orden_compra_items WHERE orden_compra_id = COALESCE(NEW.orden_compra_id, OLD.orden_compra_id)),
+        0
+    )
+    WHERE id = COALESCE(NEW.orden_compra_id, OLD.orden_compra_id);
+    RETURN NULL;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE OR REPLACE TRIGGER orden_compra_items_recalcular_total
+    AFTER INSERT OR UPDATE OR DELETE ON orden_compra_items
+    FOR EACH ROW EXECUTE FUNCTION recalcular_total_orden_compra();
 
 CREATE OR REPLACE FUNCTION recalcular_stock_insumo()
 RETURNS TRIGGER AS $$

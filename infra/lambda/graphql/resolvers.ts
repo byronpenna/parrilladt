@@ -30,6 +30,7 @@ interface PedidoRow {
   distancia_km: string | null;
   motivo_cancelacion: string | null;
   pagado: boolean;
+  ruleta_modo: string;
 }
 
 const RADIO_TIERRA_KM = 6371;
@@ -62,6 +63,59 @@ function distanciaHaversineKm(lat1: number, lng1: number, lat2: number, lng2: nu
     Math.sin(dLat / 2) ** 2 + Math.cos(rad(lat1)) * Math.cos(rad(lat2)) * Math.sin(dLng / 2) ** 2;
   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
   return RADIO_TIERRA_KM * c;
+}
+
+// sin 0/O/1/I para que no se confundan al leerlo en voz alta o a mano
+const ALFABETO_CODIGO_PREMIO = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+
+function generarCodigoPremio(): string {
+  let codigo = '';
+  for (let i = 0; i < 6; i++) {
+    codigo += ALFABETO_CODIGO_PREMIO[Math.floor(Math.random() * ALFABETO_CODIGO_PREMIO.length)];
+  }
+  return `DT-${codigo}`;
+}
+
+function esIdNumerico(id: unknown): id is string {
+  return typeof id === 'string' && /^\d+$/.test(id);
+}
+
+function shapeEncuestaSatisfaccion(r: {
+  id: string;
+  pedido_id: string | null;
+  pedido_item_id: string | null;
+  item_nombre: string | null;
+  cliente_nombre: string | null;
+  cliente_telefono: string | null;
+  calificacion_comida: number;
+  calificacion_atencion: number;
+  calificacion_recomendacion: number;
+  comentario: string | null;
+  gano_premio: boolean;
+  premio_id: string | null;
+  premio_nombre: string | null;
+  premio_codigo: string | null;
+  premio_usado: boolean;
+  created_at: Date;
+}) {
+  return {
+    id: r.id,
+    pedidoId: r.pedido_id,
+    pedidoItemId: r.pedido_item_id,
+    itemNombre: r.item_nombre,
+    clienteNombre: r.cliente_nombre,
+    clienteTelefono: r.cliente_telefono,
+    calificacionComida: r.calificacion_comida,
+    calificacionAtencion: r.calificacion_atencion,
+    calificacionRecomendacion: r.calificacion_recomendacion,
+    comentario: r.comentario,
+    ganoPremio: r.gano_premio,
+    premioId: r.premio_id,
+    premioNombre: r.premio_nombre,
+    premioCodigo: r.premio_codigo,
+    premioUsado: r.premio_usado,
+    createdAt: new Date(r.created_at).toISOString(),
+  };
 }
 
 function shapePedido(row: PedidoRow) {
@@ -98,6 +152,7 @@ function shapePedido(row: PedidoRow) {
     distanciaKm: row.distancia_km !== null ? Number(row.distancia_km) : null,
     motivoCancelacion: row.motivo_cancelacion,
     pagado: row.pagado,
+    ruletaModo: row.ruleta_modo,
   };
 }
 
@@ -105,6 +160,7 @@ const PEDIDO_SELECT = `
   SELECT p.id, p.cliente_nombre, p.nota, p.estado, p.total, p.created_at, p.updated_at,
     p.rider_id, r.nombre AS rider_nombre, p.costo_delivery, p.metodo_pago, p.hora_entrega,
     p.cliente_lat, p.cliente_lng, p.cliente_direccion, p.distancia_km, p.motivo_cancelacion, p.pagado,
+    p.ruleta_modo,
     (
       SELECT COALESCE(
         json_agg(json_build_object('estado', h.estado, 'motivo', h.motivo, 'createdAt', h.created_at) ORDER BY h.created_at),
@@ -228,6 +284,72 @@ function shapeMovimientoInsumo(r: {
     nota: r.nota,
     createdAt: new Date(r.created_at).toISOString(),
   };
+}
+
+interface OrdenCompraRow {
+  id: string;
+  estado: string;
+  nota: string | null;
+  total: string | number;
+  recibida_en: Date | null;
+  created_at: Date;
+  items: {
+    id: string;
+    insumoId: string | null;
+    insumoNombre: string;
+    unidad: string;
+    cantidad: string | number;
+    precioUnitario: string | number;
+    subtotal: string | number;
+  }[];
+}
+
+function shapeOrdenCompra(row: OrdenCompraRow) {
+  return {
+    id: row.id,
+    estado: row.estado,
+    nota: row.nota,
+    total: Number(row.total),
+    recibidaEn: row.recibida_en ? new Date(row.recibida_en).toISOString() : null,
+    createdAt: new Date(row.created_at).toISOString(),
+    items: (row.items || []).map((it) => ({
+      id: it.id,
+      insumoId: it.insumoId,
+      insumoNombre: it.insumoNombre,
+      unidad: it.unidad,
+      cantidad: Number(it.cantidad),
+      precioUnitario: Number(it.precioUnitario),
+      subtotal: Number(it.subtotal),
+    })),
+  };
+}
+
+const ORDEN_COMPRA_SELECT = `
+  SELECT oc.id, oc.estado, oc.nota, oc.total, oc.recibida_en, oc.created_at,
+    COALESCE(
+      json_agg(
+        json_build_object(
+          'id', i.id,
+          'insumoId', i.insumo_id,
+          'insumoNombre', i.insumo_nombre,
+          'unidad', i.unidad,
+          'cantidad', i.cantidad,
+          'precioUnitario', i.precio_unitario,
+          'subtotal', i.subtotal
+        ) ORDER BY i.id
+      ) FILTER (WHERE i.id IS NOT NULL),
+      '[]'
+    ) AS items
+  FROM ordenes_compra oc
+  LEFT JOIN orden_compra_items i ON i.orden_compra_id = oc.id
+`;
+
+const ORDEN_COMPRA_GROUP_BY = 'GROUP BY oc.id';
+
+async function fetchOrdenCompra(pool: Pool, id: string) {
+  const res = await pool.query(`${ORDEN_COMPRA_SELECT} WHERE oc.id = $1 ${ORDEN_COMPRA_GROUP_BY}`, [id]);
+  if (res.rowCount === 0) throw new Error(`Orden de compra ${id} no encontrada`);
+  return shapeOrdenCompra(res.rows[0]);
 }
 
 function shapeCuenta(r: {
@@ -399,6 +521,15 @@ export const rootValue = {
       [insumoId]
     );
     return res.rows.map(shapeMovimientoInsumo);
+  },
+
+  ordenesCompra: async ({ limite }: { limite?: number }) => {
+    const pool = await getPool();
+    const res = await pool.query(
+      `${ORDEN_COMPRA_SELECT} ${ORDEN_COMPRA_GROUP_BY} ORDER BY oc.created_at DESC LIMIT $1`,
+      [limite ?? 30]
+    );
+    return res.rows.map(shapeOrdenCompra);
   },
 
   cuentas: async () => {
@@ -574,6 +705,7 @@ export const rootValue = {
     clienteLat?: number | null;
     clienteLng?: number | null;
     clienteDireccion?: string | null;
+    ruletaModo?: string;
   }) => {
     const pool = await getPool();
     const sets: string[] = [];
@@ -626,6 +758,10 @@ export const rootValue = {
       values.push(args.clienteDireccion || null);
       sets.push(`distancia_km = $${i++}`);
       values.push(distanciaKm);
+    }
+    if (args.ruletaModo) {
+      sets.push(`ruleta_modo = $${i++}`);
+      values.push(args.ruletaModo);
     }
     if (sets.length > 0) {
       const res = await pool.query(`UPDATE pedidos SET ${sets.join(', ')} WHERE id = $1 RETURNING id`, [
@@ -1005,6 +1141,69 @@ export const rootValue = {
     }
   },
 
+  crearOrdenCompra: async ({
+    items,
+    nota,
+  }: {
+    items: { insumoId: string; cantidad: number }[];
+    nota?: string;
+  }) => {
+    if (items.length === 0) throw new Error('Agrega al menos un insumo a la orden');
+    for (const it of items) {
+      if (it.cantidad <= 0) throw new Error('La cantidad debe ser mayor a 0');
+    }
+    const pool = await getPool();
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+      const ordenRes = await client.query(
+        `INSERT INTO ordenes_compra (nota) VALUES ($1) RETURNING id`,
+        [nota || null]
+      );
+      const ordenId = ordenRes.rows[0].id;
+      for (const it of items) {
+        const insumoRes = await client.query(
+          'SELECT nombre, unidad, precio_referencia FROM insumos WHERE id = $1',
+          [it.insumoId]
+        );
+        if (insumoRes.rowCount === 0) throw new Error(`Insumo ${it.insumoId} no encontrado`);
+        const { nombre, unidad, precio_referencia } = insumoRes.rows[0];
+        await client.query(
+          `INSERT INTO orden_compra_items (orden_compra_id, insumo_id, insumo_nombre, unidad, cantidad, precio_unitario)
+           VALUES ($1, $2, $3, $4, $5, $6)`,
+          [ordenId, it.insumoId, nombre, unidad, it.cantidad, precio_referencia]
+        );
+      }
+      await client.query('COMMIT');
+      return fetchOrdenCompra(pool, ordenId);
+    } catch (err) {
+      await client.query('ROLLBACK');
+      throw err;
+    } finally {
+      client.release();
+    }
+  },
+
+  actualizarEstadoOrdenCompra: async ({ id, estado }: { id: string; estado: string }) => {
+    const pool = await getPool();
+    const recibidaEn = estado === 'recibida' ? new Date() : null;
+    const res = await pool.query(
+      `UPDATE ordenes_compra SET
+         estado = $2,
+         recibida_en = COALESCE($3::timestamptz, recibida_en)
+       WHERE id = $1`,
+      [id, estado, recibidaEn]
+    );
+    if (res.rowCount === 0) throw new Error(`Orden de compra ${id} no encontrada`);
+    return fetchOrdenCompra(pool, id);
+  },
+
+  eliminarOrdenCompra: async ({ id }: { id: string }) => {
+    const pool = await getPool();
+    const res = await pool.query('DELETE FROM ordenes_compra WHERE id = $1', [id]);
+    return (res.rowCount ?? 0) > 0;
+  },
+
   actualizarConfigNegocio: async ({
     latitud,
     longitud,
@@ -1224,6 +1423,261 @@ export const rootValue = {
     if (actual.rowCount === 0) return false;
     if (actual.rows[0].estado !== 'abierto') requireSuperadmin(context);
     const res = await pool.query(`DELETE FROM cierres_dia WHERE id = $1`, [id]);
+    return (res.rowCount ?? 0) > 0;
+  },
+
+  // pública (sin sesión): solo dice si el pedido (o el plato, si viene
+  // pedidoItemId) existe y si ya tiene encuesta, nunca si está habilitado
+  // para la ruleta (eso se decide recién al enviar, para no adelantarle el
+  // resultado al cliente).
+  estadoFeedbackPedido: async ({
+    pedidoId,
+    pedidoItemId,
+  }: {
+    pedidoId: string;
+    pedidoItemId?: string | null;
+  }) => {
+    if (!esIdNumerico(pedidoId)) return { existe: false, yaRespondido: false, itemNombre: null };
+    const pool = await getPool();
+
+    if (pedidoItemId) {
+      if (!esIdNumerico(pedidoItemId)) return { existe: false, yaRespondido: false, itemNombre: null };
+      const itemRes = await pool.query('SELECT item_nombre FROM pedido_items WHERE id = $1 AND pedido_id = $2', [
+        pedidoItemId,
+        pedidoId,
+      ]);
+      if (itemRes.rowCount === 0) return { existe: false, yaRespondido: false, itemNombre: null };
+      const encuestaRes = await pool.query('SELECT 1 FROM encuestas_satisfaccion WHERE pedido_item_id = $1', [
+        pedidoItemId,
+      ]);
+      return {
+        existe: true,
+        yaRespondido: (encuestaRes.rowCount ?? 0) > 0,
+        itemNombre: itemRes.rows[0].item_nombre,
+      };
+    }
+
+    const pedidoRes = await pool.query('SELECT 1 FROM pedidos WHERE id = $1', [pedidoId]);
+    if (pedidoRes.rowCount === 0) return { existe: false, yaRespondido: false, itemNombre: null };
+    const encuestaRes = await pool.query(
+      'SELECT 1 FROM encuestas_satisfaccion WHERE pedido_id = $1 AND pedido_item_id IS NULL',
+      [pedidoId]
+    );
+    return { existe: true, yaRespondido: (encuestaRes.rowCount ?? 0) > 0, itemNombre: null };
+  },
+
+  // usado por el back-office (/pedidos) para mostrar el feedback que dejó el cliente de ese
+  // pedido: la encuesta general (si la hay) y la de cada plato que tenga la suya propia
+  feedbackPedido: async ({ pedidoId }: { pedidoId: string }) => {
+    if (!esIdNumerico(pedidoId)) return { general: null, porItem: [] };
+    const pool = await getPool();
+    const res = await pool.query(
+      `SELECT id, pedido_id, pedido_item_id, item_nombre, cliente_nombre, cliente_telefono, calificacion_comida,
+         calificacion_atencion, calificacion_recomendacion, comentario, gano_premio, premio_id, premio_nombre,
+         premio_codigo, premio_usado, created_at
+       FROM encuestas_satisfaccion WHERE pedido_id = $1 ORDER BY created_at ASC`,
+      [pedidoId]
+    );
+    const filas = res.rows.map(shapeEncuestaSatisfaccion);
+    return {
+      general: filas.find((f) => !f.pedidoItemId) ?? null,
+      porItem: filas.filter((f) => f.pedidoItemId),
+    };
+  },
+
+  // pública (sin sesión): la usa /feedback en el sitio público, tanto la
+  // encuesta general de un pedido como la de un plato puntual (QR por
+  // plato, viene con pedidoItemId). La elegibilidad para el premio depende
+  // únicamente de pedidos.ruleta_modo (lo marca un admin en /pedidos):
+  // 'pedido' habilita solo la encuesta general, 'item' habilita solo las
+  // encuestas por plato — nunca se confía en nada que mande el cliente.
+  enviarFeedback: async ({
+    input,
+  }: {
+    input: {
+      pedidoId?: string | null;
+      pedidoItemId?: string | null;
+      clienteNombre?: string | null;
+      clienteTelefono?: string | null;
+      calificacionComida: number;
+      calificacionAtencion: number;
+      calificacionRecomendacion: number;
+      comentario?: string | null;
+    };
+  }) => {
+    const {
+      pedidoId,
+      pedidoItemId,
+      clienteNombre,
+      clienteTelefono,
+      calificacionComida,
+      calificacionAtencion,
+      calificacionRecomendacion,
+      comentario,
+    } = input;
+
+    for (const [campo, valor] of [
+      ['calificacionComida', calificacionComida],
+      ['calificacionAtencion', calificacionAtencion],
+      ['calificacionRecomendacion', calificacionRecomendacion],
+    ] as const) {
+      if (!Number.isInteger(valor) || valor < 1 || valor > 5) {
+        throw new Error(`${campo} debe ser un número entero entre 1 y 5`);
+      }
+    }
+
+    const pool = await getPool();
+    let pedidoIdValido: string | null = null;
+    let pedidoItemIdValido: string | null = null;
+    let itemNombreSnapshot: string | null = null;
+    let habilitado = false;
+
+    if (pedidoItemId) {
+      if (!pedidoId || !esIdNumerico(pedidoId) || !esIdNumerico(pedidoItemId)) {
+        throw new Error('Pedido o plato no encontrado');
+      }
+      const itemRes = await pool.query(
+        `SELECT pi.item_nombre, p.ruleta_modo
+         FROM pedido_items pi JOIN pedidos p ON p.id = pi.pedido_id
+         WHERE pi.id = $1 AND pi.pedido_id = $2`,
+        [pedidoItemId, pedidoId]
+      );
+      if (itemRes.rowCount === 0) throw new Error('Pedido o plato no encontrado');
+      pedidoIdValido = pedidoId;
+      pedidoItemIdValido = pedidoItemId;
+      itemNombreSnapshot = itemRes.rows[0].item_nombre;
+      habilitado = itemRes.rows[0].ruleta_modo === 'item';
+    } else if (pedidoId) {
+      if (!esIdNumerico(pedidoId)) throw new Error('Pedido no encontrado');
+      const pedidoRes = await pool.query('SELECT ruleta_modo FROM pedidos WHERE id = $1', [pedidoId]);
+      if (pedidoRes.rowCount === 0) throw new Error('Pedido no encontrado');
+      pedidoIdValido = pedidoId;
+      habilitado = pedidoRes.rows[0].ruleta_modo === 'pedido';
+    } else {
+      if (!clienteNombre?.trim() || !clienteTelefono?.trim()) {
+        throw new Error('Indica tu nombre y tu teléfono para dejar tu opinión');
+      }
+    }
+
+    let premioId: string | null = null;
+    let premioNombre: string | null = null;
+    if (pedidoIdValido && habilitado) {
+      // un premio al azar entre los activos del catálogo (/configuracion)
+      const premioRes = await pool.query('SELECT id, nombre FROM premios_ruleta WHERE activo = true ORDER BY random() LIMIT 1');
+      if (premioRes.rowCount && premioRes.rowCount > 0) {
+        premioId = premioRes.rows[0].id;
+        premioNombre = premioRes.rows[0].nombre;
+      }
+    }
+
+    // reintenta si el código al azar choca con uno ya emitido (muy
+    // improbable con 33^6 combinaciones, pero el índice único lo protege)
+    let intentos = premioNombre !== null ? 5 : 1;
+    while (intentos > 0) {
+      intentos -= 1;
+      const premioCodigo = premioNombre !== null ? generarCodigoPremio() : null;
+      try {
+        await pool.query(
+          `INSERT INTO encuestas_satisfaccion (
+             pedido_id, pedido_item_id, item_nombre, cliente_nombre, cliente_telefono, calificacion_comida,
+             calificacion_atencion, calificacion_recomendacion, comentario, gano_premio, premio_id, premio_nombre,
+             premio_codigo
+           ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)`,
+          [
+            pedidoIdValido,
+            pedidoItemIdValido,
+            itemNombreSnapshot,
+            clienteNombre?.trim() || null,
+            clienteTelefono?.trim() || null,
+            calificacionComida,
+            calificacionAtencion,
+            calificacionRecomendacion,
+            comentario?.trim() || null,
+            premioNombre !== null,
+            premioId,
+            premioNombre,
+            premioCodigo,
+          ]
+        );
+        return { ganoPremio: premioNombre !== null, premioNombre, premioCodigo };
+      } catch (err: unknown) {
+        const code = err && typeof err === 'object' && 'code' in err ? (err as { code: string }).code : null;
+        const constraint =
+          err && typeof err === 'object' && 'constraint' in err
+            ? (err as { constraint?: string }).constraint
+            : null;
+        if (
+          code === '23505' &&
+          (constraint === 'encuestas_satisfaccion_pedido_unique' || constraint === 'encuestas_satisfaccion_item_unique')
+        ) {
+          throw new Error('Ya enviaste tu opinión para esto');
+        }
+        // choque de premio_codigo: reintentar con un código nuevo si quedan intentos
+        if (code === '23505' && constraint === 'encuestas_satisfaccion_premio_codigo_unique' && intentos > 0) {
+          continue;
+        }
+        throw err;
+      }
+    }
+    throw new Error('No se pudo generar un código de premio, intenta de nuevo');
+  },
+
+  // borra una encuesta (ej. spam o una prueba) para liberar de nuevo el
+  // pedido asociado, si tenía uno, para una futura encuesta real
+  eliminarEncuestaSatisfaccion: async ({ id }: { id: string }) => {
+    const pool = await getPool();
+    const res = await pool.query('DELETE FROM encuestas_satisfaccion WHERE id = $1', [id]);
+    return (res.rowCount ?? 0) > 0;
+  },
+
+  // catálogo de premios de la ruleta, administrado en /configuracion. Se
+  // listan todos (activos e inactivos) para que el admin pueda reactivarlos.
+  premiosRuleta: async () => {
+    const pool = await getPool();
+    const res = await pool.query('SELECT id, nombre, activo FROM premios_ruleta ORDER BY activo DESC, nombre');
+    return res.rows;
+  },
+
+  crearPremioRuleta: async ({ nombre }: { nombre: string }) => {
+    const pool = await getPool();
+    try {
+      const res = await pool.query(
+        'INSERT INTO premios_ruleta (nombre) VALUES ($1) RETURNING id, nombre, activo',
+        [nombre.trim()]
+      );
+      return res.rows[0];
+    } catch (err: unknown) {
+      if (err && typeof err === 'object' && 'code' in err && (err as { code: string }).code === '23505') {
+        throw new Error(`Ya existe un premio llamado "${nombre.trim()}"`);
+      }
+      throw err;
+    }
+  },
+
+  actualizarPremioRuleta: async ({ id, nombre, activo }: { id: string; nombre?: string; activo?: boolean }) => {
+    const pool = await getPool();
+    try {
+      const res = await pool.query(
+        `UPDATE premios_ruleta SET
+           nombre = COALESCE($2, nombre),
+           activo = COALESCE($3, activo)
+         WHERE id = $1
+         RETURNING id, nombre, activo`,
+        [id, nombre?.trim() ?? null, activo ?? null]
+      );
+      if (res.rowCount === 0) throw new Error(`Premio ${id} no encontrado`);
+      return res.rows[0];
+    } catch (err: unknown) {
+      if (err && typeof err === 'object' && 'code' in err && (err as { code: string }).code === '23505') {
+        throw new Error(`Ya existe un premio llamado "${nombre?.trim()}"`);
+      }
+      throw err;
+    }
+  },
+
+  eliminarPremioRuleta: async ({ id }: { id: string }) => {
+    const pool = await getPool();
+    const res = await pool.query('DELETE FROM premios_ruleta WHERE id = $1', [id]);
     return (res.rowCount ?? 0) > 0;
   },
 };

@@ -1,5 +1,6 @@
 export type EstadoPedido = 'pendiente' | 'en_preparacion' | 'listo' | 'entregado' | 'cancelado';
 export type MetodoPago = 'efectivo' | 'transferencia';
+export type ModoRuletaPedido = 'ninguno' | 'pedido' | 'item';
 
 export interface MenuItem {
   id: string;
@@ -68,6 +69,37 @@ export interface Pedido {
   distanciaKm: number | null;
   motivoCancelacion: string | null;
   pagado: boolean;
+  ruletaModo: ModoRuletaPedido;
+}
+
+export interface EncuestaSatisfaccion {
+  id: string;
+  pedidoId: string | null;
+  pedidoItemId: string | null;
+  itemNombre: string | null;
+  clienteNombre: string | null;
+  clienteTelefono: string | null;
+  calificacionComida: number;
+  calificacionAtencion: number;
+  calificacionRecomendacion: number;
+  comentario: string | null;
+  ganoPremio: boolean;
+  premioId: string | null;
+  premioNombre: string | null;
+  premioCodigo: string | null;
+  premioUsado: boolean;
+  createdAt: string;
+}
+
+export interface FeedbackPedido {
+  general: EncuestaSatisfaccion | null;
+  porItem: EncuestaSatisfaccion[];
+}
+
+export interface PremioRuleta {
+  id: string;
+  nombre: string;
+  activo: boolean;
 }
 
 export interface ConfigNegocio {
@@ -99,6 +131,28 @@ export interface MovimientoInsumo {
   facturaKey: string | null;
   nota: string | null;
   createdAt: string;
+}
+
+export type EstadoOrdenCompra = 'pendiente' | 'recibida' | 'cancelada';
+
+export interface OrdenCompraItem {
+  id: string;
+  insumoId: string | null;
+  insumoNombre: string;
+  unidad: string;
+  cantidad: number;
+  precioUnitario: number;
+  subtotal: number;
+}
+
+export interface OrdenCompra {
+  id: string;
+  estado: EstadoOrdenCompra;
+  nota: string | null;
+  total: number;
+  recibidaEn: string | null;
+  createdAt: string;
+  items: OrdenCompraItem[];
 }
 
 export type TipoCuenta = 'efectivo' | 'banco';

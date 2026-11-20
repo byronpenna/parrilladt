@@ -24,6 +24,18 @@ export const schema = buildSchema(`
     cerrado
   }
 
+  enum ModoRuletaPedido {
+    ninguno
+    pedido
+    item
+  }
+
+  type PremioRuleta {
+    id: ID!
+    nombre: String!
+    activo: Boolean!
+  }
+
   type Cuenta {
     id: ID!
     nombre: String!
@@ -125,6 +137,54 @@ export const schema = buildSchema(`
     distanciaKm: Float
     motivoCancelacion: String
     pagado: Boolean!
+    ruletaModo: ModoRuletaPedido!
+  }
+
+  type EstadoFeedbackPedido {
+    existe: Boolean!
+    yaRespondido: Boolean!
+    itemNombre: String
+  }
+
+  type ResultadoFeedback {
+    ganoPremio: Boolean!
+    premioNombre: String
+    premioCodigo: String
+  }
+
+  type EncuestaSatisfaccion {
+    id: ID!
+    pedidoId: ID
+    pedidoItemId: ID
+    itemNombre: String
+    clienteNombre: String
+    clienteTelefono: String
+    calificacionComida: Int!
+    calificacionAtencion: Int!
+    calificacionRecomendacion: Int!
+    comentario: String
+    ganoPremio: Boolean!
+    premioId: ID
+    premioNombre: String
+    premioCodigo: String
+    premioUsado: Boolean!
+    createdAt: String!
+  }
+
+  type FeedbackPedido {
+    general: EncuestaSatisfaccion
+    porItem: [EncuestaSatisfaccion!]!
+  }
+
+  input FeedbackInput {
+    pedidoId: ID
+    pedidoItemId: ID
+    clienteNombre: String
+    clienteTelefono: String
+    calificacionComida: Int!
+    calificacionAtencion: Int!
+    calificacionRecomendacion: Int!
+    comentario: String
   }
 
   type ConfigNegocio {
@@ -161,6 +221,32 @@ export const schema = buildSchema(`
     createdAt: String!
   }
 
+  enum EstadoOrdenCompra {
+    pendiente
+    recibida
+    cancelada
+  }
+
+  type OrdenCompraItem {
+    id: ID!
+    insumoId: ID
+    insumoNombre: String!
+    unidad: String!
+    cantidad: Float!
+    precioUnitario: Float!
+    subtotal: Float!
+  }
+
+  type OrdenCompra {
+    id: ID!
+    estado: EstadoOrdenCompra!
+    nota: String
+    total: Float!
+    recibidaEn: String
+    createdAt: String!
+    items: [OrdenCompraItem!]!
+  }
+
   type Query {
     menu: [MenuItem!]!
     menuAdmin: [MenuItem!]!
@@ -175,6 +261,10 @@ export const schema = buildSchema(`
     cuentas: [Cuenta!]!
     cierresDia(limite: Int): [CierreDia!]!
     cierreDiaActual: CierreDia
+    ordenesCompra(limite: Int): [OrdenCompra!]!
+    estadoFeedbackPedido(pedidoId: ID!, pedidoItemId: ID): EstadoFeedbackPedido!
+    feedbackPedido(pedidoId: ID!): FeedbackPedido!
+    premiosRuleta: [PremioRuleta!]!
   }
 
   input ItemInput {
@@ -198,6 +288,11 @@ export const schema = buildSchema(`
   input CierreCuentaInput {
     cuentaId: ID!
     montoCierreReal: Float!
+  }
+
+  input OrdenCompraItemInput {
+    insumoId: ID!
+    cantidad: Float!
   }
 
   type Mutation {
@@ -224,6 +319,7 @@ export const schema = buildSchema(`
       clienteLat: Float
       clienteLng: Float
       clienteDireccion: String
+      ruletaModo: ModoRuletaPedido
     ): Pedido!
     actualizarConfigNegocio(latitud: Float!, longitud: Float!, direccion: String): ConfigNegocio!
     agregarCliente(nombre: String!, telefono: String): Cliente!
@@ -275,5 +371,13 @@ export const schema = buildSchema(`
       facturaKey: String
       nota: String
     ): MovimientoInsumo!
+    crearOrdenCompra(items: [OrdenCompraItemInput!]!, nota: String): OrdenCompra!
+    actualizarEstadoOrdenCompra(id: ID!, estado: EstadoOrdenCompra!): OrdenCompra!
+    eliminarOrdenCompra(id: ID!): Boolean!
+    enviarFeedback(input: FeedbackInput!): ResultadoFeedback!
+    eliminarEncuestaSatisfaccion(id: ID!): Boolean!
+    crearPremioRuleta(nombre: String!): PremioRuleta!
+    actualizarPremioRuleta(id: ID!, nombre: String, activo: Boolean): PremioRuleta!
+    eliminarPremioRuleta(id: ID!): Boolean!
   }
 `);

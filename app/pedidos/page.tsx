@@ -6,8 +6,9 @@ import writeXlsxFile from 'write-excel-file';
 import LogoutButton from '@/components/LogoutButton';
 import { gqlRequest } from '@/lib/graphql-client';
 import { QUERY_PEDIDOS, MUTATION_ACTUALIZAR_ESTADO, MUTATION_ACTUALIZAR_PEDIDO } from '@/lib/queries';
-import type { Pedido, EstadoPedido, MetodoPago } from '@/lib/types';
+import type { Pedido, EstadoPedido, MetodoPago, ModoRuletaPedido } from '@/lib/types';
 import { formatoNegocio } from '@/lib/timezone';
+import FeedbackModal from './FeedbackModal';
 
 const RAPIDOS = 'rapidos';
 const TODOS = 'todos';
@@ -24,6 +25,12 @@ const ESTADO_LABEL: Record<EstadoPedido, string> = {
 const METODO_PAGO_LABEL: Record<MetodoPago, string> = {
   efectivo: 'Efectivo',
   transferencia: 'Transferencia',
+};
+
+const RULETA_MODO_LABEL: Record<ModoRuletaPedido, string> = {
+  ninguno: 'Ninguno',
+  pedido: 'Pedido completo',
+  item: 'Por plato',
 };
 
 const ORDEN_OPCIONES = [
@@ -58,6 +65,8 @@ export default function PedidosPage() {
   const [fechaDesde, setFechaDesde] = useState('');
   const [fechaHasta, setFechaHasta] = useState('');
   const [orden, setOrden] = useState<Orden>('fecha_desc');
+
+  const [feedbackPedido, setFeedbackPedido] = useState<Pedido | null>(null);
 
   const [cancelandoId, setCancelandoId] = useState<string | null>(null);
   const [motivoCancelacion, setMotivoCancelacion] = useState(MOTIVO_DEFAULT);
@@ -157,6 +166,15 @@ export default function PedidosPage() {
     setPedidos((prev) => prev.map((x) => (x.id === p.id ? { ...x, pagado: nuevoPagado } : x)));
     try {
       await gqlRequest(MUTATION_ACTUALIZAR_PEDIDO, { id: p.id, pagado: nuevoPagado });
+    } catch {
+      cargarPedidos();
+    }
+  }
+
+  async function cambiarRuletaModo(p: Pedido, modo: ModoRuletaPedido) {
+    setPedidos((prev) => prev.map((x) => (x.id === p.id ? { ...x, ruletaModo: modo } : x)));
+    try {
+      await gqlRequest(MUTATION_ACTUALIZAR_PEDIDO, { id: p.id, ruletaModo: modo });
     } catch {
       cargarPedidos();
     }
@@ -337,9 +355,10 @@ export default function PedidosPage() {
             <table className="tabla-pedidos">
               <thead>
                 <tr>
+                  <th>Pedido</th>
                   <th>Fecha</th>
                   <th>Cliente</th>
-                  <th>Items</th>
+                  <th>Item</th>
                   <th>Nota</th>
                   <th>Estado</th>
                   <th>Rider</th>
@@ -347,71 +366,113 @@ export default function PedidosPage() {
                   <th>Distancia</th>
                   <th>Pago</th>
                   <th>Pagado</th>
+                  <th>Ruleta</th>
                   <th>Total sin delivery</th>
                   <th>Total</th>
                   <th>Acciones</th>
                 </tr>
               </thead>
               <tbody>
-                {pedidosFiltrados.map((p) => (
+                {pedidosFiltrados.map((p) => {
+                  const itemsFila = p.items.length > 0 ? p.items : [{ id: '', itemNombre: p.itemsTexto || '—', cantidad: 1 }];
+                  const filas = itemsFila.length;
+                  return (
                   <Fragment key={p.id}>
-                  <tr>
-                    <td>{formatoNegocio(new Date(p.createdAt), { dateStyle: 'short', timeStyle: 'short' })}</td>
-                    <td>{p.clienteNombre}</td>
-                    <td>{p.itemsTexto}</td>
-                    <td>{p.nota || '—'}</td>
-                    <td>
-                      <span className={`estado-badge estado-${p.estado}`}>{ESTADO_LABEL[p.estado]}</span>
-                      {p.estado === 'cancelado' && p.motivoCancelacion && (
-                        <div className="motivo-cancelacion">{p.motivoCancelacion}</div>
-                      )}
-                    </td>
-                    <td>{p.riderNombre || '—'}</td>
-                    <td className="col-monto">{p.riderNombre ? `$${p.costoDelivery.toFixed(2)}` : '—'}</td>
-                    <td>
-                      {p.distanciaKm !== null ? `~${p.distanciaKm.toFixed(1)} km` : '—'}
-                      {p.clienteLat !== null && p.clienteLng !== null && (
+                  {itemsFila.map((item, idx) => (
+                    <tr key={item.id || `${p.id}-sin-item`}>
+                      {idx === 0 && (
                         <>
-                          {' '}
-                          <a
-                            href={`https://www.google.com/maps/search/?api=1&query=${p.clienteLat},${p.clienteLng}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                          >
-                            🗺️
-                          </a>
+                          <td rowSpan={filas}>#{p.id}</td>
+                          <td rowSpan={filas}>
+                            {formatoNegocio(new Date(p.createdAt), { dateStyle: 'short', timeStyle: 'short' })}
+                          </td>
+                          <td rowSpan={filas}>{p.clienteNombre}</td>
                         </>
                       )}
-                    </td>
-                    <td>
-                      <button
-                        className={`btn ${p.metodoPago === 'efectivo' ? 'btn-verde' : 'btn-naranja'}`}
-                        onClick={() => toggleMetodoPago(p)}
-                      >
-                        {p.metodoPago === 'efectivo' ? '💵' : '🏦'} {METODO_PAGO_LABEL[p.metodoPago]}
-                      </button>
-                    </td>
-                    <td>
-                      <button
-                        className={`btn ${p.pagado ? 'btn-verde' : 'btn-naranja'}`}
-                        onClick={() => togglePagado(p)}
-                      >
-                        {p.pagado ? '✅ Pagado' : '⏳ Sin pagar'}
-                      </button>
-                    </td>
-                    <td className="col-monto">${(p.total - p.costoDelivery).toFixed(2)}</td>
-                    <td className="col-monto">${p.total.toFixed(2)}</td>
-                    <td className="acciones-productos">
-                      {p.estado !== 'cancelado' && (
-                        <button className="btn btn-naranja" onClick={() => abrirCancelacion(p)}>
-                          Cancelar
-                        </button>
+                      <td>
+                        {item.cantidad}x {item.itemNombre}
+                        {item.id && ` (#${item.id})`}
+                      </td>
+                      {idx === 0 && (
+                        <>
+                          <td rowSpan={filas}>{p.nota || '—'}</td>
+                          <td rowSpan={filas}>
+                            <span className={`estado-badge estado-${p.estado}`}>{ESTADO_LABEL[p.estado]}</span>
+                            {p.estado === 'cancelado' && p.motivoCancelacion && (
+                              <div className="motivo-cancelacion">{p.motivoCancelacion}</div>
+                            )}
+                          </td>
+                          <td rowSpan={filas}>{p.riderNombre || '—'}</td>
+                          <td rowSpan={filas} className="col-monto">
+                            {p.riderNombre ? `$${p.costoDelivery.toFixed(2)}` : '—'}
+                          </td>
+                          <td rowSpan={filas}>
+                            {p.distanciaKm !== null ? `~${p.distanciaKm.toFixed(1)} km` : '—'}
+                            {p.clienteLat !== null && p.clienteLng !== null && (
+                              <>
+                                {' '}
+                                <a
+                                  href={`https://www.google.com/maps/search/?api=1&query=${p.clienteLat},${p.clienteLng}`}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                >
+                                  🗺️
+                                </a>
+                              </>
+                            )}
+                          </td>
+                          <td rowSpan={filas}>
+                            <button
+                              className={`btn ${p.metodoPago === 'efectivo' ? 'btn-verde' : 'btn-naranja'}`}
+                              onClick={() => toggleMetodoPago(p)}
+                            >
+                              {p.metodoPago === 'efectivo' ? '💵' : '🏦'} {METODO_PAGO_LABEL[p.metodoPago]}
+                            </button>
+                          </td>
+                          <td rowSpan={filas}>
+                            <button
+                              className={`btn ${p.pagado ? 'btn-verde' : 'btn-naranja'}`}
+                              onClick={() => togglePagado(p)}
+                            >
+                              {p.pagado ? '✅ Pagado' : '⏳ Sin pagar'}
+                            </button>
+                          </td>
+                          <td rowSpan={filas}>
+                            <select
+                              title="Decide si el premio de la ruleta en /feedback se juega con la encuesta general del pedido o con la de cada plato (QR por plato)"
+                              value={p.ruletaModo}
+                              onChange={(e) => cambiarRuletaModo(p, e.target.value as ModoRuletaPedido)}
+                            >
+                              {(Object.keys(RULETA_MODO_LABEL) as ModoRuletaPedido[]).map((modo) => (
+                                <option key={modo} value={modo}>
+                                  🎡 {RULETA_MODO_LABEL[modo]}
+                                </option>
+                              ))}
+                            </select>
+                          </td>
+                          <td rowSpan={filas} className="col-monto">
+                            ${(p.total - p.costoDelivery).toFixed(2)}
+                          </td>
+                          <td rowSpan={filas} className="col-monto">
+                            ${p.total.toFixed(2)}
+                          </td>
+                          <td rowSpan={filas} className="acciones-productos">
+                            <button className="btn btn-blanco" onClick={() => setFeedbackPedido(p)}>
+                              💬 Feedback
+                            </button>
+                            {p.estado !== 'cancelado' && (
+                              <button className="btn btn-naranja" onClick={() => abrirCancelacion(p)}>
+                                Cancelar
+                              </button>
+                            )}
+                          </td>
+                        </>
                       )}
-                    </td>
-                  </tr>
+                    </tr>
+                  ))}
                   {cancelandoId === p.id && (
                     <tr>
-                      <td colSpan={13}>
+                      <td colSpan={15}>
                         <div className="panel-movimiento">
                           <strong>Cancelar pedido de {p.clienteNombre}</strong>
                           <div className="filtro-campo" style={{ minWidth: 280 }}>
@@ -438,13 +499,14 @@ export default function PedidosPage() {
                     </tr>
                   )}
                   </Fragment>
-                ))}
+                  );
+                })}
               </tbody>
               <tfoot>
                 <tr>
-                  <td colSpan={6}>Total mostrado (sin cancelados)</td>
+                  <td colSpan={7}>Total mostrado (sin cancelados)</td>
                   <td className="col-monto">${totalDelivery.toFixed(2)}</td>
-                  <td colSpan={3}></td>
+                  <td colSpan={4}></td>
                   <td className="col-monto">${totalMostradoSinDelivery.toFixed(2)}</td>
                   <td className="col-monto">${totalMostrado.toFixed(2)}</td>
                   <td></td>
@@ -454,6 +516,8 @@ export default function PedidosPage() {
           )}
         </div>
       </div>
+
+      {feedbackPedido && <FeedbackModal pedido={feedbackPedido} onClose={() => setFeedbackPedido(null)} />}
     </>
   );
 }

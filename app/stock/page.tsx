@@ -11,9 +11,19 @@ import {
   MUTATION_ELIMINAR_INSUMO,
   QUERY_MOVIMIENTOS_INSUMO,
   MUTATION_REGISTRAR_MOVIMIENTO_INSUMO,
+  QUERY_ORDENES_COMPRA,
+  MUTATION_ACTUALIZAR_ESTADO_ORDEN_COMPRA,
+  MUTATION_ELIMINAR_ORDEN_COMPRA,
 } from '@/lib/queries';
-import type { Insumo, MovimientoInsumo, TipoMovimientoInsumo } from '@/lib/types';
+import type { Insumo, MovimientoInsumo, TipoMovimientoInsumo, OrdenCompra, EstadoOrdenCompra } from '@/lib/types';
 import { formatoNegocio } from '@/lib/timezone';
+import OrdenCompraModal from './OrdenCompraModal';
+
+const ESTADO_OC_LABEL: Record<EstadoOrdenCompra, string> = {
+  pendiente: 'Pendiente',
+  recibida: 'Recibida',
+  cancelada: 'Cancelada',
+};
 
 export default function StockPage() {
   const [insumos, setInsumos] = useState<Insumo[]>([]);
@@ -54,8 +64,14 @@ export default function StockPage() {
   const [historico, setHistorico] = useState<Record<string, MovimientoInsumo[]>>({});
   const [historicoCargando, setHistoricoCargando] = useState<string | null>(null);
 
+  const [ordenCompraAbierta, setOrdenCompraAbierta] = useState(false);
+  const [ordenesCompra, setOrdenesCompra] = useState<OrdenCompra[]>([]);
+  const [cargandoOrdenes, setCargandoOrdenes] = useState(true);
+  const [errorOrdenFila, setErrorOrdenFila] = useState<{ id: string; msg: string } | null>(null);
+
   useEffect(() => {
     cargarInsumos();
+    cargarOrdenesCompra();
   }, []);
 
   async function cargarInsumos() {
@@ -68,6 +84,40 @@ export default function StockPage() {
       setError('No se pudieron cargar los insumos');
     } finally {
       setCargando(false);
+    }
+  }
+
+  async function cargarOrdenesCompra() {
+    setCargandoOrdenes(true);
+    try {
+      const data = await gqlRequest<{ ordenesCompra: OrdenCompra[] }>(QUERY_ORDENES_COMPRA, { limite: 30 });
+      setOrdenesCompra(data.ordenesCompra);
+    } catch {
+      // la página sigue funcionando con lo que ya haya en memoria
+    } finally {
+      setCargandoOrdenes(false);
+    }
+  }
+
+  async function cambiarEstadoOrden(orden: OrdenCompra, estado: EstadoOrdenCompra) {
+    try {
+      const data = await gqlRequest<{ actualizarEstadoOrdenCompra: OrdenCompra }>(
+        MUTATION_ACTUALIZAR_ESTADO_ORDEN_COMPRA,
+        { id: orden.id, estado }
+      );
+      setOrdenesCompra((prev) => prev.map((o) => (o.id === orden.id ? data.actualizarEstadoOrdenCompra : o)));
+    } catch (e) {
+      setErrorOrdenFila({ id: orden.id, msg: e instanceof Error ? e.message : 'No se pudo actualizar la orden' });
+    }
+  }
+
+  async function eliminarOrden(orden: OrdenCompra) {
+    if (!window.confirm('¿Eliminar esta orden de compra? No se puede deshacer.')) return;
+    try {
+      await gqlRequest(MUTATION_ELIMINAR_ORDEN_COMPRA, { id: orden.id });
+      setOrdenesCompra((prev) => prev.filter((o) => o.id !== orden.id));
+    } catch (e) {
+      setErrorOrdenFila({ id: orden.id, msg: e instanceof Error ? e.message : 'No se pudo eliminar la orden' });
     }
   }
 
@@ -410,6 +460,9 @@ export default function StockPage() {
               <option value="si">Solo bajo mínimo</option>
             </select>
           </div>
+          <button className="btn btn-naranja" onClick={() => setOrdenCompraAbierta(true)}>
+            🧾 Nueva orden de compra
+          </button>
         </div>
 
         {error && <div className="pedidos-error">{error}</div>}
@@ -641,7 +694,87 @@ export default function StockPage() {
             </table>
           )}
         </div>
+
+        <div className="tabla-pedidos-wrap card-blanca">
+          <h2 className="chart-titulo">Histórico de órdenes de compra</h2>
+          {cargandoOrdenes ? (
+            <div className="vacio-col">Cargando...</div>
+          ) : ordenesCompra.length === 0 ? (
+            <div className="vacio-col">Todavía no hay órdenes de compra</div>
+          ) : (
+            <table className="tabla-pedidos">
+              <thead>
+                <tr>
+                  <th>Fecha</th>
+                  <th>Estado</th>
+                  <th>Items</th>
+                  <th>Nota</th>
+                  <th>Total</th>
+                  <th>Acciones</th>
+                </tr>
+              </thead>
+              <tbody>
+                {ordenesCompra.map((o) => (
+                  <Fragment key={o.id}>
+                    <tr>
+                      <td>{formatoNegocio(new Date(o.createdAt), { dateStyle: 'short', timeStyle: 'short' })}</td>
+                      <td>
+                        <span
+                          className={`estado-badge ${
+                            o.estado === 'recibida'
+                              ? 'estado-listo'
+                              : o.estado === 'cancelada'
+                                ? 'estado-cancelado'
+                                : 'estado-pendiente'
+                          }`}
+                        >
+                          {ESTADO_OC_LABEL[o.estado]}
+                        </span>
+                      </td>
+                      <td>{o.items.map((it) => `${it.cantidad} ${it.unidad} ${it.insumoNombre}`).join(', ')}</td>
+                      <td>{o.nota || '—'}</td>
+                      <td className="col-monto">${o.total.toFixed(2)}</td>
+                      <td className="acciones-productos">
+                        {o.estado === 'pendiente' && (
+                          <>
+                            <button className="btn btn-verde" onClick={() => cambiarEstadoOrden(o, 'recibida')}>
+                              ✅ Recibida
+                            </button>
+                            <button className="btn btn-naranja" onClick={() => cambiarEstadoOrden(o, 'cancelada')}>
+                              Cancelar
+                            </button>
+                          </>
+                        )}
+                        <button className="btn btn-blanco" onClick={() => eliminarOrden(o)}>
+                          Eliminar
+                        </button>
+                      </td>
+                    </tr>
+                    {errorOrdenFila?.id === o.id && (
+                      <tr>
+                        <td colSpan={6} className="pedidos-error">
+                          {errorOrdenFila.msg}
+                        </td>
+                      </tr>
+                    )}
+                  </Fragment>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
       </div>
+
+      {ordenCompraAbierta && (
+        <OrdenCompraModal
+          insumos={insumos}
+          onClose={() => setOrdenCompraAbierta(false)}
+          onCreada={(orden) => {
+            setOrdenesCompra((prev) => [orden, ...prev]);
+            setOrdenCompraAbierta(false);
+          }}
+        />
+      )}
     </>
   );
 }

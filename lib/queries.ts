@@ -28,6 +28,11 @@ export const QUERY_PEDIDOS = `
       total
       createdAt
       itemsTexto
+      items {
+        id
+        itemNombre
+        cantidad
+      }
       riderId
       riderNombre
       costoDelivery
@@ -39,7 +44,58 @@ export const QUERY_PEDIDOS = `
       distanciaKm
       motivoCancelacion
       pagado
+      ruletaModo
     }
+  }
+`;
+
+const ENCUESTA_SATISFACCION_CAMPOS = `
+  id
+  pedidoId
+  pedidoItemId
+  itemNombre
+  clienteNombre
+  clienteTelefono
+  calificacionComida
+  calificacionAtencion
+  calificacionRecomendacion
+  comentario
+  ganoPremio
+  premioId
+  premioNombre
+  premioCodigo
+  premioUsado
+  createdAt
+`;
+
+export const QUERY_FEEDBACK_PEDIDO = `
+  query FeedbackPedido($pedidoId: ID!) {
+    feedbackPedido(pedidoId: $pedidoId) {
+      general { ${ENCUESTA_SATISFACCION_CAMPOS} }
+      porItem { ${ENCUESTA_SATISFACCION_CAMPOS} }
+    }
+  }
+`;
+
+export const QUERY_PREMIOS_RULETA = `
+  query { premiosRuleta { id nombre activo } }
+`;
+
+export const MUTATION_CREAR_PREMIO_RULETA = `
+  mutation CrearPremioRuleta($nombre: String!) {
+    crearPremioRuleta(nombre: $nombre) { id nombre activo }
+  }
+`;
+
+export const MUTATION_ACTUALIZAR_PREMIO_RULETA = `
+  mutation ActualizarPremioRuleta($id: ID!, $nombre: String, $activo: Boolean) {
+    actualizarPremioRuleta(id: $id, nombre: $nombre, activo: $activo) { id nombre activo }
+  }
+`;
+
+export const MUTATION_ELIMINAR_PREMIO_RULETA = `
+  mutation EliminarPremioRuleta($id: ID!) {
+    eliminarPremioRuleta(id: $id)
   }
 `;
 
@@ -126,6 +182,7 @@ export const MUTATION_ACTUALIZAR_PEDIDO = `
     $clienteLat: Float
     $clienteLng: Float
     $clienteDireccion: String
+    $ruletaModo: ModoRuletaPedido
   ) {
     actualizarPedido(
       id: $id
@@ -137,6 +194,7 @@ export const MUTATION_ACTUALIZAR_PEDIDO = `
       clienteLat: $clienteLat
       clienteLng: $clienteLng
       clienteDireccion: $clienteDireccion
+      ruletaModo: $ruletaModo
     ) {
       id
       riderId
@@ -149,6 +207,7 @@ export const MUTATION_ACTUALIZAR_PEDIDO = `
       clienteLng
       clienteDireccion
       distanciaKm
+      ruletaModo
     }
   }
 `;
@@ -318,6 +377,48 @@ export const MUTATION_REGISTRAR_MOVIMIENTO_INSUMO = `
     ) {
       id insumoId tipo cantidad precioUnitario facturaKey nota createdAt
     }
+  }
+`;
+
+const ORDEN_COMPRA_CAMPOS = `
+  id
+  estado
+  nota
+  total
+  recibidaEn
+  createdAt
+  items {
+    id
+    insumoId
+    insumoNombre
+    unidad
+    cantidad
+    precioUnitario
+    subtotal
+  }
+`;
+
+export const QUERY_ORDENES_COMPRA = `
+  query OrdenesCompra($limite: Int) {
+    ordenesCompra(limite: $limite) { ${ORDEN_COMPRA_CAMPOS} }
+  }
+`;
+
+export const MUTATION_CREAR_ORDEN_COMPRA = `
+  mutation CrearOrdenCompra($items: [OrdenCompraItemInput!]!, $nota: String) {
+    crearOrdenCompra(items: $items, nota: $nota) { ${ORDEN_COMPRA_CAMPOS} }
+  }
+`;
+
+export const MUTATION_ACTUALIZAR_ESTADO_ORDEN_COMPRA = `
+  mutation ActualizarEstadoOrdenCompra($id: ID!, $estado: EstadoOrdenCompra!) {
+    actualizarEstadoOrdenCompra(id: $id, estado: $estado) { ${ORDEN_COMPRA_CAMPOS} }
+  }
+`;
+
+export const MUTATION_ELIMINAR_ORDEN_COMPRA = `
+  mutation EliminarOrdenCompra($id: ID!) {
+    eliminarOrdenCompra(id: $id)
   }
 `;
 
